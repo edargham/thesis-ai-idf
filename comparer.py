@@ -3,33 +3,35 @@ import numpy as np
 from math import sqrt
 
 # Load CSV files from the folder "data"
-accumulated_path = "data/beirut-accumulated-10k-v7-monthly.csv"
-meteostat_path = "data/beirut-meteostat-monthly.csv"
+accumulated_path = "data/beirut-daily-precipitation.csv"
+meteostat_path = "data/beirut-meteostat.csv"
 
 df_accumulated = pd.read_csv(accumulated_path)
 df_meteostat = pd.read_csv(meteostat_path)
 
 # Replace null values with zeros in "value" column for meteostat
 df_meteostat['value'] = df_meteostat['value'].fillna(0)
-df_accumulated['value'] = df_accumulated['value'] #/ 2
 
-# Select rows where "value" is non-zero in both dataframes based on common index
-common_nonzero_index = df_accumulated.index[df_accumulated['value'] != 0].intersection(
-df_meteostat.index[df_meteostat['value'] != 0]
-)
-df_accumulated = df_accumulated.loc[common_nonzero_index]
-df_meteostat = df_meteostat.loc[common_nonzero_index]
+# Select rows from both datasets where the date column matches and both "value" columns are non-zero
+merged_df = pd.merge(df_accumulated, df_meteostat, on='date', suffixes=('_acc', '_met'))
+merged_df = merged_df[(merged_df['value_met'] != 0)]
+df_accumulated = merged_df[['date', 'value_acc']].rename(columns={'value_acc': 'value'})
+df_meteostat = merged_df[['date', 'value_met']].rename(columns={'value_met': 'value'})
 
 # To compare using RMSE, we need to ensure the two arrays align.
 # For simplicity, we'll assume they align by index. If necessary, you can merge them on a common key.
 
 # Align indices by taking the intersection of indices if lengths differ
 common_index = df_accumulated.index.intersection(df_meteostat.index)
-values_accumulated = df_accumulated.loc[common_index, ['date', 'value']]
+values_accumulated = merged_df[['date', 'value_acc']]
+values_accumulated['value'] = values_accumulated['value_acc']
+values_accumulated = values_accumulated.drop(columns='value_acc')
 print(values_accumulated)
 values_accumulated.to_csv('data/comp-accumulated.csv', index=False)
 
-values_meteostat = df_meteostat.loc[common_index, ['date', 'value']]
+values_meteostat = merged_df[['date', 'value_met']]
+values_meteostat['value'] = values_meteostat['value_met']
+values_meteostat = values_meteostat.drop(columns='value_met')
 print(values_meteostat)
 values_meteostat.to_csv('data/comp-meteostat.csv', index=False)
 

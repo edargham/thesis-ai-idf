@@ -7,11 +7,11 @@ start = datetime(2000, 6, 1)
 end = datetime(2024, 6, 1)
 
 # Create Point for Beirut
-beirut = Point(33.89, 35.50)
-beirut.radius = 10000
+beirut = Point(33.83, 35.49)
+beirut.radius = 25000
 
 # Get daily data
-data = Monthly(beirut, start, end)
+data = Daily(beirut, start, end, model=False)
 data = data.fetch()
 
 # Keep only prcp column
@@ -24,6 +24,6 @@ data = data.rename(columns={'prcp': 'value'})
 data.index.name = 'date'
 
 # Save data to CSV
-data.to_csv('data/beirut-meteostat-monthly.csv', index=True)
+data.to_csv('data/beirut-meteostat.csv', index=True)
 print(data.tail())
 print(data['value'].sum())
