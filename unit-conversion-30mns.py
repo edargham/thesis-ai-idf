@@ -4,7 +4,7 @@ import pandas as pd
 
 def main():
   # Path to the CSV file with 30-minute precipitation readings (in mm/hr)
-  csv_path = "./data/beirut-accumulated-25k-v7-30mns.csv"
+  csv_path = "./data/beirut-accumulated-30k-v7-imerg.csv"
   
   # Read the CSV file. Ensure that the timestamp column is parsed as datetime.
   # Adjust the column names if needed.
@@ -15,16 +15,15 @@ def main():
 
   # For each hour, calculate the mean precipitation reading out of the two half-hour periods.
   hourly_precip = df.groupby('hour')['value'].mean().reset_index()
-  #hourly_precip['value'] = hourly_precip['value'] / 2
 
   # Create a new column for the date part from the hourly timestamp.
-  hourly_precip['date'] = hourly_precip['hour'].dt.date
+  hourly_precip['date'] = pd.to_datetime(hourly_precip['hour']).dt.floor("d")
 
   # Group by date and sum the hourly precipitation (in mm) for each day.
-  daily_precip = hourly_precip.groupby('date')['value'].sum().reset_index()
+  daily_precip = hourly_precip.groupby(hourly_precip['date'])["value"].sum().reset_index()
   # Save the daily accumulated precipitation to a new CSV file.
   daily_precip.to_csv("./data/beirut-daily-precipitation.csv", index=False)
-  print("Daily precipitation accumulation has been saved to 'daily_precipitation.csv'.")
+  print("Daily precipitation accumulation has been saved to 'beirut-daily-precipitation.csv'.")
 
   # Save the hourly accumulated precipitation to a new CSV file.
   hourly_precip['date'] = hourly_precip['hour']

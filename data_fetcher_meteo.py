@@ -8,7 +8,7 @@ end = datetime(2024, 6, 1)
 
 # Create Point for Beirut
 beirut = Point(33.83, 35.49)
-beirut.radius = 25000
+beirut.radius = 10000
 
 # Get daily data
 data = Daily(beirut, start, end, model=False)
