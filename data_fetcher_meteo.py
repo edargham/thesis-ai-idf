@@ -1,17 +1,15 @@
 from datetime import datetime
-from meteostat import Point, Daily, Hourly, Monthly
+from meteostat import Point, Daily, Hourly, Monthly, Stations
 import pandas as pd
 
 # Set time period
 start = datetime(2000, 6, 1)
 end = datetime(2024, 6, 1)
 
-# Create Point for Beirut
-beirut = Point(33.83, 35.49)
-beirut.radius = 10000
+beirut_rhia = '40100'
 
 # Get daily data
-data = Daily(beirut, start, end, model=False)
+data = Daily(beirut_rhia, start, end, model=False)
 data = data.fetch()
 
 # Keep only prcp column

@@ -22,8 +22,8 @@ def nash_sutcliffe_efficiency(observed, simulated):
   return 1 - (numerator / denominator) if denominator != 0 else np.nan
 
 # Load CSV files from the folder "data"
-accumulated_path = "data/beirut-daily-precipitation.csv"
-meteostat_path = "data/beirut-meteostat.csv"
+accumulated_path = "data/beirut-hourly-precipitation.csv"
+meteostat_path = "data/40100-hourly-cleaned.csv"
 
 df_accumulated = pd.read_csv(accumulated_path)
 df_meteostat = pd.read_csv(meteostat_path)
@@ -34,7 +34,8 @@ merged_df = pd.merge(df_accumulated, df_meteostat, on='date', suffixes=('_acc', 
 # Drop NaN rows
 merged_df = merged_df.dropna()
 
-merged_df['abs_diff'] = merged_df['value_acc'] / merged_df['value_met']
+merged_df['bias_coef'] = merged_df['value_acc'] / (merged_df['value_met'] + 1e-4)
+merged_df['diff'] = merged_df['value_acc'] - merged_df['value_met']
 
 merged_df.to_csv('data/comp-merged.csv', index=False)
 

@@ -13,7 +13,7 @@ def main():
   # Assuming each hourly value represents the precipitation accumulated during that hour,
   # the daily total in mm is simply the sum of the hourly values.
   daily_precip = df.groupby(df['date'].dt.floor("d"))["value"].sum().reset_index()
-  daily_precip['value'] = daily_precip['value']
+  daily_precip['value'] = daily_precip['value'] #* 3
   
   # Save the daily accumulated precipitation to a new CSV file.
   daily_precip.to_csv("./data/beirut-daily-precipitation-1hr.csv", index=False)

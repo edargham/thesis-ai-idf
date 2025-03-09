@@ -4,7 +4,7 @@ import pandas as pd
 
 def main():
   # Path to the CSV file with 30-minute precipitation readings (in mm/hr)
-  csv_path = "./data/beirut-accumulated-30k-v7-imerg.csv"
+  csv_path = "./data/beirut-accumulated-10k-v7-imerg.csv"
   
   # Read the CSV file. Ensure that the timestamp column is parsed as datetime.
   # Adjust the column names if needed.
@@ -14,7 +14,8 @@ def main():
   df['hour'] = df['date'].dt.floor('h')
 
   # For each hour, calculate the mean precipitation reading out of the two half-hour periods.
-  hourly_precip = df.groupby('hour')['value'].mean().reset_index()
+  hourly_precip = df.groupby('hour')['value'].sum().reset_index()
+  hourly_precip['value'] = hourly_precip['value'] / 2
 
   # Create a new column for the date part from the hourly timestamp.
   hourly_precip['date'] = pd.to_datetime(hourly_precip['hour']).dt.floor("d")
