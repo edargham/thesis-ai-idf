@@ -22,8 +22,8 @@ def nash_sutcliffe_efficiency(observed, simulated):
   return 1 - (numerator / denominator) if denominator != 0 else np.nan
 
 # Load CSV files from the folder "data"
-accumulated_path = "data/beirut-hourly-precipitation.csv"
-meteostat_path = "data/40100-hourly-cleaned.csv"
+accumulated_path = "data/beirut-daily-precipitation.csv"
+meteostat_path = "data/40100.csv"
 
 df_accumulated = pd.read_csv(accumulated_path)
 df_meteostat = pd.read_csv(meteostat_path)
