@@ -30,7 +30,7 @@ df_meteostat = pd.read_csv(meteostat_path)
 
 # Select rows from both datasets where the date column matches and both "value" columns are non-zero
 merged_df = pd.merge(df_accumulated, df_meteostat, on='date', suffixes=('_acc', '_met'))
-# merged_df = merged_df[(merged_df['value_acc'] > 0) | (merged_df['value_met'] >= 0)]
+#merged_df = merged_df[(merged_df['value_acc'] > 0) | (merged_df['value_met'] > 0)]
 
 # Round 'value_acc to the nearest tenth
 merged_df['value_acc'] = merged_df['value_acc'].round(1)
