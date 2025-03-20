@@ -4,16 +4,16 @@ import pandas as pd
 
 def main():
   # Path to the CSV file with 30-minute precipitation readings (in mm/hr)
-  csv_path = "./data/beirut-accumulated-10k-v8-1hr.csv"
+  csv_path = "./data/beirut-trmm-rhia-hourly.csv"
   
   # Read the CSV file. Ensure that the timestamp column is parsed as datetime.
   # Adjust the column names if needed.
   df = pd.read_csv(csv_path, parse_dates=['date'])
+  df['value'] = df['value'] * 3
 
   # Assuming each hourly value represents the precipitation accumulated during that hour,
   # the daily total in mm is simply the sum of the hourly values.
   daily_precip = df.groupby(df['date'].dt.floor("d"))["value"].sum().reset_index()
-  daily_precip['value'] = daily_precip['value'] #* 3
   
   # Save the daily accumulated precipitation to a new CSV file.
   daily_precip.to_csv("./data/beirut-daily-precipitation-1hr.csv", index=False)

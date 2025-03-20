@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from math import sqrt
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 from scipy import stats
 
@@ -22,21 +23,70 @@ def nash_sutcliffe_efficiency(observed, simulated):
   return 1 - (numerator / denominator) if denominator != 0 else np.nan
 
 # Load CSV files from the folder "data"
-accumulated_path = "data/beirut-daily-corrected.csv"
+accumulated_path = "data/beirut-ndvi-rhia-8day-landsat-2.csv"
 meteostat_path = "data/40100.csv"
+
 
 df_accumulated = pd.read_csv(accumulated_path)
 df_meteostat = pd.read_csv(meteostat_path)
 
+# Round the values of the columns to the nearest tenth
+# df_accumulated['value'] = df_accumulated['value'] * 86400
+# df_accumulated['value'] = df_accumulated['value'].round(1)
+# df_meteostat['value'] = df_meteostat['value'].round(1)
+
+# Convert date columns to datetime
+df_accumulated['date'] = pd.to_datetime(df_accumulated['date'])
+df_meteostat['date'] = pd.to_datetime(df_meteostat['date'])
+
+# Initialize variables to store the best shift and highest correlation
+best_shift = 0
+best_inverse_shift = 0
+highest_correlation = -1
+highest_inverse_correlation = 0
+
+# Iterate over a range of shift days to find the best shift
+for shift_days in range(-90, 0):  # Example range from -30 to 30 days
+  shifted_df_accumulated = df_accumulated.copy()
+  shifted_df_accumulated['date'] = shifted_df_accumulated['date'] + pd.DateOffset(days=shift_days)
+  
+  # Merge the dataframes on the date column
+  merged_df = pd.merge(shifted_df_accumulated, df_meteostat, on='date', suffixes=('_acc', '_met'))
+  
+  # Drop NaN rows
+  merged_df = merged_df.dropna()
+  
+  # Compute correlation coefficient
+  correlation = merged_df['value_acc'].corr(merged_df['value_met'])
+  
+  # Update the best shift and highest correlation if current correlation is higher
+  if correlation > highest_correlation:
+    highest_correlation = correlation
+    best_shift = shift_days
+
+  # Compute correlation coefficient for the inverse shift
+  if correlation < highest_inverse_correlation:
+    highest_inverse_correlation = correlation
+    best_inverse_shift = shift_days
+
+# Apply the best shift to the accumulated dataframe
+df_accumulated['date'] = df_accumulated['date'] + pd.DateOffset(days=best_shift)
+
+print(f"Best shift: {best_shift} days")
+print(f"Highest correlation: {highest_correlation}")
+print(f"Best inverse shift: {best_inverse_shift} days")
+print(f"Highest inverse correlation: {highest_inverse_correlation}")
+
+
 # Select rows from both datasets where the date column matches and both "value" columns are non-zero
 merged_df = pd.merge(df_accumulated, df_meteostat, on='date', suffixes=('_acc', '_met'))
-merged_df = merged_df[(merged_df['value_acc'] > 0) | (merged_df['value_met'] > 0)]
-
-# Round 'value_acc to the nearest tenth
-merged_df['value_acc'] = merged_df['value_acc'].round(1)
+#merged_df = merged_df[(merged_df['value_met'] > 0)]
+print(merged_df.head())
 
 # Drop NaN rows
 merged_df = merged_df.dropna()
+
+# merged_df['value_met'] = MinMaxScaler().fit_transform(merged_df[['value_met']])
 
 merged_df['bias_coef'] = merged_df['value_acc'] / (merged_df['value_met'] + 1e-4)
 merged_df['diff'] = merged_df['value_acc'] - merged_df['value_met']
