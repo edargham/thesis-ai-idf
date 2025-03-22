@@ -6,7 +6,7 @@ from sklearn.svm import SVR
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_score, explained_variance_score
 from sklearn.model_selection import GridSearchCV
 from scipy import stats
-from xgboost import XGBRegressor
+import xgboost as xgb
 
 # Load the dataset
 df = pd.read_csv('merged_data.csv')
@@ -20,7 +20,7 @@ y = df['meteostat_value'].values
 X = df.drop(columns=['meteostat_value'])
 
 # Split data into train and test sets (80% train, 20% test)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=69, shuffle=True)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=69, shuffle=True)
 
 # Scale features
 scaler = MinMaxScaler()
@@ -35,31 +35,31 @@ param_grid = {
     'kernel': ['linear', 'rbf', 'poly']
 }
 
-xgb_params = {
-    'n_estimators': [100, 500, 1000],
-    'max_depth': [3, 5, 7, 9],
-    'learning_rate': [0.01, 0.1, 0.3],
-    'subsample': [0.5, 0.7, 1.0],
-    'colsample_bytree': [0.5, 0.7, 1.0],
-    'colsample_bylevel': [0.5, 0.7, 1.0],
-    'colsample_bynode': [0.5, 0.7, 1.0],
-    'reg_alpha': [0, 0.1, 0.5, 1.0],
-    'reg_lambda': [0, 0.1, 0.5, 1.0],
-    'gamma': [0, 0.1, 0.5, 1.0],
-    'min_child_weight': [1, 3, 5, 7]
-}
-
-# param_grid = {
-#   'n_estimators': [50, 100, 200],
-#   'learning_rate': [0.01, 0.1, 0.3],
-#   'max_depth': [3, 5, 7],
-#   'subsample': [0.7, 0.9],
-#   'colsample_bytree': [0.7, 0.9]
+# xgb_params = {
+#     'n_estimators': [100, 500, 1000],
+#     'max_depth': [3, 5, 7, 9],
+#     'learning_rate': [0.01, 0.1, 0.3],
+#     'subsample': [0.5, 0.7, 1.0],
+#     'colsample_bytree': [0.5, 0.7, 1.0],
+#     'colsample_bylevel': [0.5, 0.7, 1.0],
+#     'colsample_bynode': [0.5, 0.7, 1.0],
+#     'reg_alpha': [0, 0.1, 0.5, 1.0],
+#     'reg_lambda': [0, 0.1, 0.5, 1.0],
+#     'gamma': [0, 0.1, 0.5, 1.0],
+#     'min_child_weight': [1, 3, 5, 7]
 # }
+
+xgb_params = {
+  'n_estimators': [50, 100, 200],
+  'learning_rate': [0.01, 0.1, 0.3],
+  'max_depth': [3, 5, 7],
+  'subsample': [0.7, 0.9],
+  'colsample_bytree': [0.7, 0.9]
+}
 
 
 # Create a base model
-tuner = GridSearchCV(XGBRegressor(), xgb_params, cv=5, n_jobs=-1, scoring='r2', verbose=1)
+tuner = GridSearchCV(xgb.XGBRegressor(tree_method='hist'), xgb_params, cv=None, n_jobs=-1, scoring='r2', verbose=1)
 tuner.fit(X_train_scaled, y_train)
 
 # Get the best parameters

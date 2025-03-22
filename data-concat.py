@@ -97,7 +97,7 @@ if dfs:
   # Drop 50% of the rows where the target variable is zero
   meteostat_value = 'meteostat_value'
   zero_rows = merged_df[merged_df[meteostat_value] == 0].index
-  drop_indices = np.random.choice(zero_rows, int(len(zero_rows) * 0.0), replace=False)
+  drop_indices = np.random.choice(zero_rows, int(len(zero_rows) *0.7), replace=False)
   merged_df = merged_df.drop(drop_indices)
 
   # Save the merged dataframe
