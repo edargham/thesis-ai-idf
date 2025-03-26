@@ -23,7 +23,7 @@ def nash_sutcliffe_efficiency(observed, simulated):
   return 1 - (numerator / denominator) if denominator != 0 else np.nan
 
 # Load CSV files from the folder "data"
-accumulated_path = "data/beirut-daily-corrected.csv"
+accumulated_path = "data/beirut-hourly-precipitation.csv"
 meteostat_path = "data/40100-hourly-cleaned.csv"
 
 
@@ -84,7 +84,7 @@ df_accumulated['value'] = df_accumulated['value'].clip(lower=0)
 
 # Select rows from both datasets where the date column matches and both "value" columns are non-zero
 merged_df = pd.merge(df_accumulated, df_meteostat, on='date', suffixes=('_acc', '_met'))
-merged_df = merged_df[(merged_df['value_met'] > 0)]
+# merged_df = merged_df[(merged_df['value_met'] > 0)]
 print(merged_df.head())
 
 # Drop NaN rows
