@@ -1,0 +1,9 @@
+# Ignore everything
+*
+
+# But not .tex and .gitignore files
+!*.tex
+!*.gitignore
+
+# Don't ignore directories to recurse into them
+!*/

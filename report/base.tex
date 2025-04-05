@@ -1,0 +1,41 @@
+\documentclass[
+  12pt,
+  a4paper,
+]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{fullpage}
+
+
+\author{Elias Dargham}
+\title{Data Collection Documentation}
+\date{\today}
+\pagestyle{fancy}
+\fancyhf{}
+\cfoot{Page \thepage\ of~\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0pt}
+
+\begin{document}
+\maketitle
+
+\input{introduction/intro}
+
+\section{Sources}
+For this task, 30-minute, 1-hour, 3-hour, and 24-hour precipitation observations
+were collected from various collections in the Global Precipitation 
+Measurement Mission (GPM) and the Tropical Rainfall Measuring Mission (TRMM) 
+archives.
+
+\subsection*{Tropical Rainfall Measuring Mission (TRMM)}
+The TRMM mission is the first joint mission between the National Aeronautics and 
+Space Administration (NASA) and the Japan Aerospace Exploration Agency (JAXA).
+
+\subsection*{Global Precipitation Measurement Mission (GPM)}
+The GPM mission is a joint mission between the National Aeronautics and Space 
+Administration (NASA) and the Japan Aerospace Exploration Agency (JAXA).
+
+\end{document}
