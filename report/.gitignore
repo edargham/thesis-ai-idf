@@ -3,6 +3,7 @@
 
 # But not .tex and .gitignore files
 !*.tex
+!*.bib
 !*.gitignore
 
 # Don't ignore directories to recurse into them
