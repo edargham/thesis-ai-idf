@@ -1,5 +1,8 @@
 import os
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
 
 
 if __name__ == '__main__':
@@ -81,4 +84,76 @@ if __name__ == '__main__':
     )
     df.to_excel(output_path, index=True)
     print(f"Aggregated data saved to {output_path}")
-   
+
+
+# Find annual maximums and convert to intensities (mm/hr)
+df["year"] = df.index.year
+
+df_intensity = df.copy()
+
+# Convert rainfall depth to intensity (mm/hr)
+df_intensity["30mns"] = df["30mns"]  # 30 mins = 0.5 hours
+df_intensity["1h"] = df["1h"] #/ 1  # 1 hour (already in mm/hr)
+df_intensity["3h"] = df["3h"] #/ 3  # 3 hours
+df_intensity["24h"] = df["24h"] / 24  # 24 hours
+
+# Store intensity values in separate columns for IDF analysis
+df_intensity["30mns_intensity"] = df_intensity["30mns"].copy()
+df_intensity["1h_intensity"] = df_intensity["1h"].copy()
+df_intensity["3h_intensity"] = df_intensity["3h"].copy()
+df_intensity["24h_intensity"] = df_intensity["24h"].copy()
+
+# Get annual maximum intensities first
+annual_max_intensity = df_intensity[["year", "30mns", "1h", "3h", "24h"]].groupby("year").max()
+
+# Define return periods and corresponding probabilities
+return_periods = np.array([2, 5, 10, 25, 50, 100])
+probabilities = 1 - 1 / return_periods
+
+# Dictionary to store Gumbel parameters for each duration
+gumbel_params = {}
+durations = ["30mns", "1h", "3h", "24h"]
+duration_hours = [30, 60, 180, 1440]
+
+# # Fit GEV distribution and calculate intensities
+intensities = np.zeros((len(return_periods), len(durations)))
+for j, dur in enumerate(durations):
+    shape, loc, scale = stats.genextreme.fit(annual_max_intensity[dur])
+    gumbel_params[dur] = (shape, loc)  # Now storing shape, location, scale
+    for i, prob in enumerate(probabilities):
+        intensities[i, j] = stats.genextreme.ppf(c=shape, loc=loc, scale=scale, q=prob)
+
+# Fit Gumbel distribution and calculate intensities
+# intensities = np.zeros((len(return_periods), len(durations)))
+# for j, dur in enumerate(durations):
+#     loc, scale = stats.gumbel_r.fit(annual_max_intensity[dur])
+#     gumbel_params[dur] = (loc, scale)  # Now storing location and scale
+#     for i, prob in enumerate(probabilities):
+#         intensities[i, j] = stats.gumbel_r.ppf(q=prob, loc=loc, scale=scale)
+
+# Create IDF curve plot
+plt.figure(figsize=(10, 6))
+for i, rp in enumerate(return_periods):
+    plt.plot(duration_hours, intensities[i], label=f"T = {rp} years")
+
+plt.xlabel("Duration (minutes)")
+plt.ylabel("Intensity (mm/hr)")
+plt.title("Intensity-Duration-Frequency (IDF) Curve")
+plt.grid(True, which="both", ls="-")
+plt.legend()
+
+output_dir = os.path.join(os.path.dirname(__file__), "data")
+plt.savefig(os.path.join(output_dir, "idf_curve.png"))
+plt.show()
+
+# Save the IDF data
+idf_data = pd.DataFrame(
+    intensities, index=return_periods, columns=[f"{d} mins" for d in duration_hours]
+)
+idf_data.index.name = "Return Period (years)"
+idf_data.to_csv(os.path.join(output_dir, "idf_data.csv"))
+
+print("Gumbel Distribution Parameters:")
+for dur in durations:
+    shape, loc = gumbel_params[dur]
+    print(f"{dur}: shape = {shape:.4f}, location = {loc:.4f}")
