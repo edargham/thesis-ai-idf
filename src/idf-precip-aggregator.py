@@ -1,15 +1,13 @@
 import os
 import pandas as pd
 import numpy as np
-
-import matplotlib.pyplot as plt
 from scipy import stats
-
+import matplotlib.pyplot as plt
 
 
 if __name__ == "__main__":
     data_path_30mns = os.path.join(
-        os.path.dirname(__file__), "data", "gpm-nasa-30mns.csv"
+        os.path.dirname(__file__), "data", "gpm-bey-30mns.csv"
     )
     data_path_1h = os.path.join(
         os.path.dirname(__file__),
@@ -80,11 +78,7 @@ df["year"] = df.index.year
 
 df_intensity = df.copy()
 
-
 # Convert rainfall depth to intensity (mm/hr)
-df_intensity["30mns"] = df["30mns"]  # 30 mins = 0.5 hours
-df_intensity["1h"] = df["1h"] #/ 1  # 1 hour (already in mm/hr)
-df_intensity["3h"] = df["3h"] #/ 3  # 3 hours
 df_intensity["30mns"] = df["30mns"]  # 30 mins = 0.5 hours
 df_intensity["1h"] = df["1h"] #/ 1  # 1 hour (already in mm/hr)
 df_intensity["3h"] = df["3h"] #/ 3  # 3 hours
@@ -95,14 +89,7 @@ df_intensity["30mns_intensity"] = df_intensity["30mns"].copy()
 df_intensity["1h_intensity"] = df_intensity["1h"].copy()
 df_intensity["3h_intensity"] = df_intensity["3h"].copy()
 df_intensity["24h_intensity"] = df_intensity["24h"].copy()
-# Store intensity values in separate columns for IDF analysis
-df_intensity["30mns_intensity"] = df_intensity["30mns"].copy()
-df_intensity["1h_intensity"] = df_intensity["1h"].copy()
-df_intensity["3h_intensity"] = df_intensity["3h"].copy()
-df_intensity["24h_intensity"] = df_intensity["24h"].copy()
 
-# Get annual maximum intensities first
-annual_max_intensity = df_intensity[["year", "30mns", "1h", "3h", "24h"]].groupby("year").max()
 # Get annual maximum intensities first
 annual_max_intensity = df_intensity[["year", "30mns", "1h", "3h", "24h"]].groupby("year").max()
 
@@ -123,7 +110,7 @@ duration_hours = [30, 60, 180, 1440]
 #     for i, prob in enumerate(probabilities):
 #         intensities[i, j] = stats.genextreme.ppf(c=shape, loc=loc, scale=scale, q=prob)
 
-# # Fit GEV distribution and calculate intensities
+# Fit Gumbel distribution and calculate intensities
 intensities = np.zeros((len(return_periods), len(durations)))
 for j, dur in enumerate(durations):
     loc, scale = stats.gumbel_r.fit(annual_max_intensity[dur])
@@ -134,9 +121,7 @@ for j, dur in enumerate(durations):
 # Create IDF curve plot
 plt.figure(figsize=(10, 6))
 for i, rp in enumerate(return_periods):
-    plt.plot(duration_hours, intensities[i], label=f"T = {rp} years")
-
-plt.xlabel("Duration (minutes)")
+    plt.plot(duration_hours, intensities[i], marker="o", label=f"T = {rp} years")
 
 plt.xlabel("Duration (minutes)")
 plt.ylabel("Intensity (mm/hr)")
