@@ -19,11 +19,12 @@
 \fancyhf{}
 \cfoot{Page \thepage\ of~\pageref{LastPage}}
 \renewcommand{\headrulewidth}{0pt}
-
+\setlength{\parindent}{0pt}
 \begin{document}
 \maketitle
 
 \input{introduction/intro}
+\input{lit-review/lit-review}
 
 \section{Sources}
 For this task, 30-minute, 1-hour, 3-hour, and 24-hour precipitation observations were collected from various collections in the Global Precipitation Measurement Mission (GPM) and the Tropical Rainfall Measuring Mission (TRMM) archives.
@@ -34,6 +35,6 @@ The TRMM mission is the first joint mission between the National Aeronautics and
 \subsection*{Global Precipitation Measurement Mission (GPM)}
 The GPM mission is a joint mission between the National Aeronautics and Space Administration (NASA) and the Japan Aerospace Exploration Agency (JAXA).
 
-\bibliographystyle{IEEEtranN}
+\bibliographystyle{plain}
 \bibliography{references}
 \end{document}
