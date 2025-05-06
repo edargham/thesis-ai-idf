@@ -93,6 +93,11 @@ annual_max_intensity = (
     df_intensity[["year", "30mns", "1h", "3h", "24h"]].groupby("year").max()
 )
 
+output_path = os.path.join(
+    os.path.dirname(__file__), "results", "annual_max_intensity"
+)
+annual_max_intensity.to_csv(f"{output_path}.csv", index=True)
+
 # Define return periods and corresponding probabilities
 return_periods = np.array([2, 5, 10, 25, 50, 100])
 probabilities = 1 - 1 / return_periods
