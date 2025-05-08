@@ -82,6 +82,11 @@ df_intensity["1h"] = df["1h"]  # / 1  # 1 hour (already in mm/hr)
 df_intensity["3h"] = df["3h"]  # / 3  # 3 hours
 df_intensity["24h"] = df["24h"] / 24  # 24 hours
 
+# Reorder columns to put 'year' first
+columns = ['year'] + [col for col in df_intensity.columns if col != 'year']
+df_intensity = df_intensity[columns]
+df_intensity.to_csv(os.path.join(os.path.dirname(__file__), "results", "historical_intensity.csv"), index=True)
+
 # Store intensity values in separate columns for IDF analysis
 df_intensity["30mns_intensity"] = df_intensity["30mns"].copy()
 df_intensity["1h_intensity"] = df_intensity["1h"].copy()
@@ -136,11 +141,10 @@ for j, dur in enumerate(durations):
 # Create IDF curve plot
 plt.figure(figsize=(10, 6))
 for i, rp in enumerate(return_periods):
-    plt.plot(duration_hours, intensities_gum[i], marker="o", label=f"T = {rp} years")
+    plt.plot(duration_hours, intensities_gum[i], label=f"T = {rp} years")
     plt.plot(
         duration_hours,
         intensities_wbl[i],
-        marker="x",
         linestyle="--",
         label=f"T = {rp} years (WBL)",
     )
