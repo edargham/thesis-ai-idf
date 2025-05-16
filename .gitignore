@@ -6,3 +6,6 @@ data/*.csv
 *.pt
 *.pth
 *.zip
+
+src/results/bey-aggregated-final.csv
+src/results/historical_intensity.csv
