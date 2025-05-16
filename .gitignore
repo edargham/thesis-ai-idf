@@ -3,4 +3,5 @@ data/*.csv
 *.old
 .DS_Store
 *.xlsx
-*.png
+*.pt
+*.pth

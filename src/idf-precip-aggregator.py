@@ -6,6 +6,15 @@ import matplotlib.pyplot as plt
 
 
 if __name__ == "__main__":
+    data_path_5mns = os.path.join(
+        os.path.dirname(__file__), "data", "gpm-bey-5mns.csv"
+    )
+    data_path_10mns = os.path.join(
+        os.path.dirname(__file__), "data", "gpm-bey-10mns.csv"
+    )
+    data_path_15mns = os.path.join(
+        os.path.dirname(__file__), "data", "gpm-bey-15mns.csv"
+    )
     data_path_30mns = os.path.join(
         os.path.dirname(__file__), "data", "gpm-bey-30mns.csv"
     )
@@ -15,9 +24,10 @@ if __name__ == "__main__":
     data_path_3h = os.path.join(os.path.dirname(__file__), "data", "trmm-bey-3hrs.csv")
     data_path_24h = os.path.join(os.path.dirname(__file__), "data", "gpm-bey-daily.csv")
 
-    # Read the data
+    df_5mns = pd.read_csv(data_path_5mns)
+    df_10mns = pd.read_csv(data_path_10mns)
+    df_15mns = pd.read_csv(data_path_15mns)
     df_30mns = pd.read_csv(data_path_30mns)
-
     df_30mns["value"] = df_30mns["value"] / 0.5
 
     # df_hr is the the sum divided by 2 for every hour in the 30mns data
@@ -37,27 +47,30 @@ if __name__ == "__main__":
     df_24h = pd.read_csv(data_path_24h)
 
     # Convert the time columns to datetime
+    df_5mns["date"] = pd.to_datetime(df_5mns["date"])
+    df_10mns["date"] = pd.to_datetime(df_10mns["date"])
+    df_15mns["date"] = pd.to_datetime(df_15mns["date"])
     df_30mns["date"] = pd.to_datetime(df_30mns["date"])
     df_1h["date"] = pd.to_datetime(df_1h["date"])
     df_3h["date"] = pd.to_datetime(df_3h["date"])
     df_24h["date"] = pd.to_datetime(df_24h["date"])
 
     # Set the time columns as the index
+    df_5mns.set_index("date", inplace=True)
+    df_10mns.set_index("date", inplace=True)
+    df_15mns.set_index("date", inplace=True)
     df_30mns.set_index("date", inplace=True)
     df_1h.set_index("date", inplace=True)
     df_3h.set_index("date", inplace=True)
     df_24h.set_index("date", inplace=True)
 
     # Merge the dataframes on the index
-    df = pd.concat([df_30mns, df_1h, df_3h, df_24h], axis=1)
+    df = pd.concat([df_5mns, df_10mns, df_15mns, df_30mns, df_1h, df_3h, df_24h], axis=1)
 
-    df.columns = ["30mns", "1h", "3h", "24h"]
+    df.columns = ["5mns", "10mns", "15mns", "30mns", "1h", "3h", "24h"]
 
     # Drop all the rows with dates after 2019-12-31 23:59:59
     df = df[df.index < "2019-12-31 23:59:59"]
-
-    # Drop all the rows with dates before 1998-01-01 00:00:00
-    # df = df[df.index >= '1998-01-01 00:00:00']
 
     # Fill NaN values with 0
     df.fillna(0, inplace=True)
@@ -66,7 +79,7 @@ if __name__ == "__main__":
     output_path = os.path.join(
         os.path.dirname(__file__), "results", "bey-aggregated-final"
     )
-    df.to_excel(f"{output_path}.xlsx", index=True)
+    # df.to_excel(f"{output_path}.xlsx", index=True)
     df.to_csv(f"{output_path}.csv", index=True)
     print(f"Aggregated data saved to {output_path}")
 
@@ -77,6 +90,9 @@ df["year"] = df.index.year
 df_intensity = df.copy()
 
 # Convert rainfall depth to intensity (mm/hr)
+df_intensity["5mns"] = df["5mns"]  # 5 mins = 1/12 hours
+df_intensity["10mns"] = df["10mns"]  # 10 mins = 1/6 hours
+df_intensity["15mns"] = df["15mns"]  # 15 mins = 1/4 hours
 df_intensity["30mns"] = df["30mns"]  # 30 mins = 0.5 hours
 df_intensity["1h"] = df["1h"]  # / 1  # 1 hour (already in mm/hr)
 df_intensity["3h"] = df["3h"]  # / 3  # 3 hours
@@ -88,6 +104,9 @@ df_intensity = df_intensity[columns]
 df_intensity.to_csv(os.path.join(os.path.dirname(__file__), "results", "historical_intensity.csv"), index=True)
 
 # Store intensity values in separate columns for IDF analysis
+df_intensity["5mns_intensity"] = df_intensity["5mns"].copy()
+df_intensity["10mns_intensity"] = df_intensity["10mns"].copy()
+df_intensity["15mns_intensity"] = df_intensity["15mns"].copy()
 df_intensity["30mns_intensity"] = df_intensity["30mns"].copy()
 df_intensity["1h_intensity"] = df_intensity["1h"].copy()
 df_intensity["3h_intensity"] = df_intensity["3h"].copy()
@@ -95,7 +114,7 @@ df_intensity["24h_intensity"] = df_intensity["24h"].copy()
 
 # Get annual maximum intensities first
 annual_max_intensity = (
-    df_intensity[["year", "30mns", "1h", "3h", "24h"]].groupby("year").max()
+    df_intensity[["year", "5mns", "10mns", "15mns", "30mns", "1h", "3h", "24h"]].groupby("year").max()
 )
 
 output_path = os.path.join(
@@ -110,8 +129,8 @@ probabilities = 1 - 1 / return_periods
 # Dictionary to store Gumbel parameters for each duration
 gumbel_params = {}
 emperical_params = {}
-durations = ["30mns", "1h", "3h", "24h"]
-duration_hours = [30, 60, 180, 1440]
+durations = ["5mns", "10mns", "15mns", "30mns", "1h", "3h", "24h"]
+duration_hours = [5, 10, 15, 30, 60, 180, 1440]
 
 # Fit Gumbel distribution and calculate intensities
 intensities_gum = np.zeros((len(return_periods), len(durations)))
@@ -140,23 +159,28 @@ for j, dur in enumerate(durations):
 
 # Create IDF curve plot
 plt.figure(figsize=(10, 6))
+
+# Create smooth duration array
+smooth_duration = np.linspace(5, 1440, 1440//5)
+
 for i, rp in enumerate(return_periods):
-    plt.plot(duration_hours, intensities_gum[i], label=f"T = {rp} years")
-    plt.plot(
-        duration_hours,
-        intensities_wbl[i],
-        linestyle="--",
-        label=f"T = {rp} years (WBL)",
-    )
+    # Interpolate Gumbel values for smooth curve
+    smooth_intensities_gum = np.interp(smooth_duration, duration_hours, intensities_gum[i])
+    plt.plot(smooth_duration, smooth_intensities_gum, label=f"T = {rp} years")
+    
+    # Interpolate Weibull values for smooth curve
+    smooth_intensities_wbl = np.interp(smooth_duration, duration_hours, intensities_wbl[i])
+    plt.plot(smooth_duration, smooth_intensities_wbl, linestyle="--", label=f"T = {rp} years (Empirical)")
 
 plt.xlabel("Duration (minutes)")
 plt.ylabel("Intensity (mm/hr)")
+plt.xscale("log")
 plt.title("Intensity-Duration-Frequency (IDF) Curve")
 plt.grid(True, which="both", ls="-")
 plt.legend()
 
 output_dir = os.path.join(os.path.dirname(__file__), "figures")
-plt.savefig(os.path.join(output_dir, "idf_curve.png"))
+plt.savefig(os.path.join(output_dir, "idf_curves_trad.png"), dpi=300)
 
 # Save the IDF data
 idf_data = pd.DataFrame(
