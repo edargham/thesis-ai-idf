@@ -1,2 +1,4 @@
 *.csv filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
+! ./results/bey-aggregated-final.csv
+! ./results/historical_intensity.csv
