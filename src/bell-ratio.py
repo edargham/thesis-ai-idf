@@ -11,7 +11,7 @@ df["value"] = df["value"] / 0.5
 
 
 # Function to apply Bell's ratio for intensities
-def apply_bells_ratio_intensity(intensity_T, t, T, n=0.6):
+def apply_bells_ratio_intensity(intensity_T, t, T, n=(1/3)):
     """
     Apply Bell's ratio for intensities.
 
@@ -28,7 +28,7 @@ def apply_bells_ratio_intensity(intensity_T, t, T, n=0.6):
         return 0
 
     # For intensities, the relationship is I_t / I_T = (T/t)^(1-n)
-    ratio = (T / t) ** (1 - n)
+    ratio = (T / t) ** (n)
     intensity_t = intensity_T * ratio
 
     return intensity_t

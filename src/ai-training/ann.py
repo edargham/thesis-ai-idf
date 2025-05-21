@@ -146,7 +146,7 @@ class IDFDataset(Dataset):
 
 # Create dataset and split into train/test
 idf_dataset = IDFDataset(empirical_data)
-train_size = int(0.8 * len(idf_dataset))
+train_size = int(0.5 * len(idf_dataset))
 test_size = len(idf_dataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(
     idf_dataset, [train_size, test_size]
@@ -180,12 +180,12 @@ class IDFModel(nn.Module):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = IDFModel().to(device)
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.0001)
 # Add scheduler that reduces learning rate when test loss plateaus
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=200)
 
 # Train the model
-num_epochs = 2500
+num_epochs = 1500
 for epoch in range(num_epochs):
     # Training phase
     model.train()

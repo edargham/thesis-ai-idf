@@ -213,7 +213,7 @@ for i, rp in enumerate(return_periods):
     plt.plot(duration_hours, intensities_wbl[i], '--', color=colors[i], 
              marker='o', markersize=5, linewidth=1.5, label=f"Empirical T = {rp} years")
 
-plt.xscale('log')
+#plt.xscale('log')
 plt.xlabel('Duration (minutes)', fontsize=12)
 plt.ylabel('Intensity (mm/hr)', fontsize=12)
 plt.title('IDF Curves Comparison: Gumbel Distribution vs Empirical Formula', fontsize=14)
@@ -237,7 +237,7 @@ for i, rp in enumerate(return_periods):
     plt.plot(duration_hours, intensities_gum[i], marker="o", label=f"{rp}-year")
 
 plt.xlabel("Duration (minutes)")
-plt.xscale("log")
+#plt.xscale("log")
 plt.ylabel("Rainfall Intensity (mm/hr)")
 plt.title("Intensity-Duration-Frequency (IDF) Curves\nGumbel Distribution Method")
 plt.legend()
