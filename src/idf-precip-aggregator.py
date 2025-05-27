@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import numpy as np
 from scipy import stats
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
 
 
@@ -143,59 +142,6 @@ for j, dur in enumerate(durations):
     for i, prob in enumerate(probabilities):
         intensities_gum[i, j] = stats.gumbel_r.ppf(q=prob, loc=loc, scale=scale)
 
-# Empirical IDF parameters (these would typically be calibrated for the specific location)
-a = 380.0  # intensity parameter
-b = 0.2  # return period exponent
-c = 10.0  # duration offset
-e = 0.7  # duration exponent
-
-for j, dur in enumerate(durations):
-    # Store the empirical parameters
-    emperical_params[dur] = (a, b, c, e)
-
-    # Calculate intensities using the empirical formula: I = a * T^b / (d + c)^e
-    duration_in_minutes = duration_hours[j]
-    for i, rp in enumerate(return_periods):
-        intensities_wbl[i, j] = a * (rp**b) / ((duration_in_minutes + c) ** e)
-
-# Create IDF curve plot
-# Calculate metrics (RMSE, MAE, R2) for each return period between Gumbel and empirical values
-
-rmse_values = []
-mae_values = []
-r2_values = []
-
-for i, rp in enumerate(return_periods):
-    y_true = intensities_wbl[i]  # Empirical values
-    y_pred = intensities_gum[i]  # Gumbel values
-    
-    # Calculate metrics
-    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-    mae = mean_absolute_error(y_true, y_pred)
-    r2 = r2_score(y_true, y_pred)
-    
-    rmse_values.append(rmse)
-    mae_values.append(mae)
-    r2_values.append(r2)
-
-# Display metrics
-metrics_df = pd.DataFrame({
-    'Return Period': return_periods,
-    'RMSE': [round(x, 4) for x in rmse_values],
-    'MAE': [round(x, 4) for x in mae_values],
-    'R2': [round(x, 4) for x in r2_values]
-})
-print("\nModel Performance Metrics by Return Period:")
-print(metrics_df)
-
-# Calculate overall metrics
-overall_rmse = np.mean(rmse_values)
-overall_mae = np.mean(mae_values)
-overall_r2 = np.mean(r2_values)
-
-print(f"\nOverall RMSE: {overall_rmse:.4f}")
-print(f"Overall MAE: {overall_mae:.4f}")
-print(f"Overall R2: {overall_r2:.4f}")
 
 # Plot the IDF curves similar to ann.py
 plt.figure(figsize=(14, 10))
@@ -203,33 +149,9 @@ plt.figure(figsize=(14, 10))
 # Define colors for different return periods
 colors = ['blue', 'green', 'red', 'purple', 'orange', 'brown']
 
-# Plot both Gumbel and empirical data for comparison
-for i, rp in enumerate(return_periods):
-    # Gumbel prediction (solid line)
-    plt.plot(duration_hours, intensities_gum[i], '-', color=colors[i], 
-             linewidth=2, label=f"Gumbel T = {rp} years")
-    
-    # Empirical data (dashed line with markers)
-    plt.plot(duration_hours, intensities_wbl[i], '--', color=colors[i], 
-             marker='o', markersize=5, linewidth=1.5, label=f"Empirical T = {rp} years")
-
-#plt.xscale('log')
-plt.xlabel('Duration (minutes)', fontsize=12)
-plt.ylabel('Intensity (mm/hr)', fontsize=12)
-plt.title('IDF Curves Comparison: Gumbel Distribution vs Empirical Formula', fontsize=14)
-plt.grid(True, which="both", ls="-")
-
-# Add metrics as text
-plt.text(0.02, 0.98, f"RMSE: {overall_rmse:.4f}\nMAE: {overall_mae:.4f}\nR²: {overall_r2:.4f}",
-         transform=plt.gca().transAxes, fontsize=10, verticalalignment='top',
-         bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-
-# Adjust legend to avoid crowding
-plt.legend(loc='upper right', fontsize=9)
-
 plt.tight_layout()
 output_dir = os.path.join(os.path.dirname(__file__), "figures")
-plt.savefig(os.path.join(output_dir, "idf_comparison_gumbel.png"), dpi=300)
+plt.savefig(os.path.join(output_dir, "idf_gumbel.png"), dpi=300)
 
 # Original IDF curve plot (simplified version)
 plt.figure(figsize=(10, 6))
@@ -237,7 +159,6 @@ for i, rp in enumerate(return_periods):
     plt.plot(duration_hours, intensities_gum[i], marker="o", label=f"{rp}-year")
 
 plt.xlabel("Duration (minutes)")
-#plt.xscale("log")
 plt.ylabel("Rainfall Intensity (mm/hr)")
 plt.title("Intensity-Duration-Frequency (IDF) Curves\nGumbel Distribution Method")
 plt.legend()
@@ -254,12 +175,6 @@ idf_data.index.name = "Return Period (years)"
 
 output_dir = os.path.join(os.path.dirname(__file__), "results")
 idf_data.to_csv(os.path.join(output_dir, "idf_data.csv"))
-
-empirical_data = pd.DataFrame(
-    intensities_wbl, index=return_periods, columns=[f"{d} mins" for d in duration_hours]
-)
-empirical_data.index.name = "Return Period (years)"
-empirical_data.to_csv(os.path.join(output_dir, "empirical_idf_data.csv"))
 
 print("Gumbel Distribution Parameters:")
 for dur in durations:

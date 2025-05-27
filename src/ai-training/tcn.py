@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.optim as optim
@@ -23,6 +24,7 @@ print(f"Total years: {data['year'].nunique()}")
 
 # Define features
 intensity_columns = ["5mns", "10mns", "15mns", "30mns", "1h", "3h", "24h"]
+# data["24h"] = data["24h"] / 0.5  # Convert daily to hourly
 
 # Normalize the data to improve training
 scaler = MinMaxScaler()
@@ -32,31 +34,15 @@ data_normalized[intensity_columns] = normalized_intensities
 
 
 # Create sequences for TCN training
-def create_sequences(data, seq_length):
+def create_sequences(data_series, seq_length):
     x, y = [], []
-    for i in range(len(data) - seq_length):
-        x.append(data[i : i + seq_length])
-        y.append(data[i + seq_length])
+    for i in range(len(data_series) - seq_length):
+        x.append(data_series[i : i + seq_length])
+        y.append(data_series[i + seq_length])
     return np.array(x), np.array(y)
 
 
-seq_length = 12  # Use two weeks of data to predict the next day
-X, y = create_sequences(normalized_intensities, seq_length)
-
-# Split into train and test sets
-train_size = int(0.7 * len(X))
-X_train, X_test = X[:train_size], X[train_size:]
-y_train, y_test = y[:train_size], y[train_size:]
-
-# Convert to PyTorch tensors
-X_train = torch.FloatTensor(X_train)
-y_train = torch.FloatTensor(y_train)
-X_test = torch.FloatTensor(X_test)
-y_test = torch.FloatTensor(y_test)
-
-# Reshape X for TCN input: [batch, channels, sequence length]
-X_train = X_train.transpose(1, 2)
-X_test = X_test.transpose(1, 2)
+seq_length = 32  # Use 32 time steps to predict the next value
 
 
 class Chomp1d(nn.Module):
@@ -65,7 +51,6 @@ class Chomp1d(nn.Module):
         self.chomp_size = chomp_size
 
     def forward(self, x):
-        # Remove padding on the right to make the convolution causal
         return x[:, :, : -self.chomp_size].contiguous()
 
 
@@ -74,7 +59,7 @@ class TemporalBlock(nn.Module):
         self, n_inputs, n_outputs, kernel_size, stride, dilation, padding, dropout=0.2
     ):
         super(TemporalBlock, self).__init__()
-        self.conv1 = nn.utils.weight_norm(
+        self.conv1 = nn.utils.parametrizations.weight_norm(
             nn.Conv1d(
                 n_inputs,
                 n_outputs,
@@ -88,7 +73,7 @@ class TemporalBlock(nn.Module):
         self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout(dropout)
 
-        self.conv2 = nn.utils.weight_norm(
+        self.conv2 = nn.utils.parametrizations.weight_norm(
             nn.Conv1d(
                 n_outputs,
                 n_outputs,
@@ -113,7 +98,6 @@ class TemporalBlock(nn.Module):
             self.dropout2,
         )
 
-        # 1x1 convolution for residual connection if input and output dimensions don't match
         self.downsample = (
             nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
         )
@@ -140,7 +124,6 @@ class RainfallTCN(nn.Module):
         layers = []
         num_levels = len(num_channels)
 
-        # Start with input dimension as the first layer's input size
         for i in range(num_levels):
             dilation_size = 2**i
             in_channels = input_size if i == 0 else num_channels[i - 1]
@@ -159,163 +142,185 @@ class RainfallTCN(nn.Module):
             ]
 
         self.temporal_blocks = nn.Sequential(*layers)
-        self.linear = nn.Linear(num_channels[-1], output_size)
+
+        # Add self-attention layer
+        hidden_dim = num_channels[-1]
+        num_heads = min(4, hidden_dim // 4)  # Ensure divisible by head count
+        self.self_attention = nn.MultiheadAttention(
+            embed_dim=hidden_dim, num_heads=num_heads, dropout=dropout, batch_first=True
+        )
+
+        # Layer normalization
+        self.norm = nn.LayerNorm(hidden_dim)
+
+        # Output layer
+        self.linear = nn.Linear(hidden_dim, output_size)
 
     def forward(self, x):
         # TCN expects input: [batch, channels, seq_len]
-        out = self.temporal_blocks(x)
+        features = self.temporal_blocks(x)
+
+        # Transpose to [batch, seq_len, channels] for attention
+        features = features.transpose(1, 2)
+
+        # Apply self-attention
+        attn_output, _ = self.self_attention(features, features, features)
+        features = features + attn_output  # Residual connection
+        features = self.norm(features)
+
         # Use the last time step for prediction
-        out = out[:, :, -1]
+        out = features[:, -1, :]
         out = self.linear(out)
         return out
 
 
-# Set hyperparameters
-input_size = len(intensity_columns)
-output_size = len(intensity_columns)
-num_channels = [24, 24]  # Hidden dimension sizes in TCN blocks
-kernel_size = 3
-dropout = 0.2
-learning_rate = 0.001
-num_epochs = 50
-batch_size = 65536
-
-# Initialize model
-model = RainfallTCN(input_size, output_size, num_channels, kernel_size, dropout)
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-# Create data loaders
-train_dataset = torch.utils.data.TensorDataset(X_train, y_train)
-train_loader = torch.utils.data.DataLoader(
-    dataset=train_dataset, batch_size=batch_size, shuffle=False
-)
-
-# Use GPU if available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-
-print(f"Using device: {device}")
-print("Beginning training...")
-
-# Training loop
-# Create checkpoint directory if it doesn't exist
+# Train individual models for each duration
+num_epochs = 65  # Reduced for faster training
+models = {}
+predictions = {}
 checkpoint_dir = os.path.join(os.path.dirname(__file__), "..", "checkpoints")
 os.makedirs(checkpoint_dir, exist_ok=True)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Initialize learning rate scheduler
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer, mode="min", factor=0.5, patience=3
-)
+for idx, duration in enumerate(intensity_columns):
+    print(f"\nTraining model for {duration}...")
 
-# Training loop
-best_loss = float("inf")
-for epoch in range(num_epochs):
-    # Training phase
-    model.train()
-    running_loss = 0.0
+    # Get data for this duration
+    # Filter out non-zero values from the original data
+    non_zero_mask = data[duration].values > 0
+    duration_data = normalized_intensities[non_zero_mask, idx].reshape(-1, 1)
 
-    for batch_X, batch_y in train_loader:
-        batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+    # Create sequences
+    X, y = create_sequences(duration_data, seq_length)
 
-        # Forward pass
-        outputs = model(batch_X)
-        loss = criterion(outputs, batch_y)
-
-        # Backward and optimize
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-
-    # Calculate average training loss for the epoch
-    train_loss = running_loss / len(train_loader)
-
-    # Evaluation phase
-    model.eval()
-    test_loss = 0.0
-    with torch.no_grad():
-        for i in range(0, len(X_test), batch_size):
-            batch_X = X_test[i : i + batch_size].to(device)
-            batch_y = y_test[i : i + batch_size].to(device)
-            outputs = model(batch_X)
-            loss = criterion(outputs, batch_y)
-            test_loss += loss.item() * len(batch_X)
-
-    test_loss /= len(X_test)
-
-    # Update learning rate based on test loss
-    scheduler.step(test_loss)
-
-    current_lr = optimizer.param_groups[0]["lr"]
-    print(
-        f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, LR: {current_lr:.6f}"
+    # Split into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.04, random_state=36683, shuffle=True
     )
 
-    # Save checkpoint at regular intervals or if it's the best model
-    if (epoch + 1) % 50 == 0 or epoch + 1 == num_epochs:
-        checkpoint_path = os.path.join(checkpoint_dir, f"idf-tcn_epoch-{epoch + 1}.pt")
-        torch.save(
-            {
-                "epoch": epoch + 1,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "scheduler_state_dict": scheduler.state_dict(),
-                "train_loss": train_loss,
-                "test_loss": test_loss,
-            },
-            checkpoint_path,
+    # Convert to PyTorch tensors
+    X_train = torch.FloatTensor(X_train).transpose(1, 2)  # Shape: [batch, 1, seq_len]
+    y_train = torch.FloatTensor(y_train)
+    X_test = torch.FloatTensor(X_test).transpose(1, 2)
+    y_test = torch.FloatTensor(y_test)
+
+    # Create model for this duration (1 input feature, 1 output)
+    model = RainfallTCN(
+        input_size=1, output_size=1, num_channels=[32, 64], kernel_size=3, dropout=0.2
+    )
+    model.to(device)
+
+    # Setup optimizer and criterion
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    criterion = nn.MSELoss()
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.85, patience=10
+    )
+
+    # Training setup
+    train_dataset = torch.utils.data.TensorDataset(X_train, y_train)
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset, batch_size=128, shuffle=False
+    )
+
+    # Training loop
+    best_loss = float("inf")
+    for epoch in range(num_epochs):  # 10 epochs
+        # Training phase
+        model.train()
+        running_loss = 0.0
+
+        for batch_X, batch_y in train_loader:
+            batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+
+            outputs = model(batch_X)
+            loss = criterion(outputs, batch_y)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+
+        # Evaluation phase
+        model.eval()
+        test_loss = 0.0
+        with torch.no_grad():
+            for i in range(0, len(X_test), 128):
+                batch_X = X_test[i : i + 128].to(device)
+                batch_y = y_test[i : i + 128].to(device)
+                outputs = model(batch_X)
+                loss = criterion(outputs, batch_y)
+                test_loss += loss.item() * len(batch_X)
+
+        test_loss /= len(X_test)
+        scheduler.step(test_loss)
+
+        print(
+            f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {running_loss/len(train_loader):.6f}, "
+            f"Test Loss: {test_loss:.6f} (LR: {optimizer.param_groups[0]['lr']:.6f})"
         )
-        print(f"Checkpoint saved to {checkpoint_path}")
 
-    # Save the best model based on test loss
-    if test_loss < best_loss:
-        best_loss = test_loss
-        best_model_path = os.path.join(checkpoint_dir, "idf-tcn_best.pt")
-        torch.save(
-            {
-                "epoch": epoch + 1,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "scheduler_state_dict": scheduler.state_dict(),
-                "train_loss": train_loss,
-                "test_loss": best_loss,
-            },
-            best_model_path,
+        # Save best model
+        if test_loss < best_loss:
+            best_loss = test_loss
+            torch.save(
+                model.state_dict(),
+                os.path.join(checkpoint_dir, f"tcn_{duration}_best.pt"),
+            )
+
+    # Store the model
+    models[duration] = model
+
+    # Generate predictions for this duration
+    model.eval()
+    with torch.no_grad():
+        pred_X = torch.FloatTensor(X).transpose(1, 2).to(device)
+        duration_preds = []
+
+        for i in range(0, len(pred_X), 128):
+            batch_pred = model(pred_X[i : i + 128]).cpu().numpy()
+            duration_preds.extend(batch_pred)
+
+        predictions[duration] = np.array(duration_preds).flatten()
+
+# Calculate annual maximum intensities separately for each duration
+annual_max_dict = {}
+
+for idx, duration in enumerate(intensity_columns):
+    # Get predictions for this duration
+    duration_pred = predictions[duration]
+
+    # Get years corresponding to these predictions
+    non_zero_mask = data[duration].values > 0
+    years = data["year"][non_zero_mask].values[seq_length:]
+
+    # Check if lengths match after accounting for sequence creation
+    if len(years) != len(duration_pred):
+        print(
+            f"Warning: Length mismatch for {duration}. Years: {len(years)}, Predictions: {len(duration_pred)}"
         )
+        continue
 
-print("Training complete")
+    # Denormalize predictions for this duration only
+    denorm_array = np.zeros((len(duration_pred), len(intensity_columns)))
+    denorm_array[:, idx] = duration_pred
+    denorm_preds = scaler.inverse_transform(denorm_array)[:, idx]
 
-# Evaluate the model
-# Process predictions in batches to avoid memory issues
-model.eval()
-batch_size = 65536
-all_dataset = torch.utils.data.TensorDataset(torch.FloatTensor(X).transpose(1, 2))
-all_loader = torch.utils.data.DataLoader(all_dataset, batch_size=batch_size)
+    # Group by year and find maximum for each year
+    year_dict = {}
+    for year in np.unique(years):
+        year_mask = years == year
+        year_dict[year] = np.max(denorm_preds[year_mask])
 
-all_predictions = []
-with torch.no_grad():
-    for (batch_X,) in all_loader:
-        batch_X = batch_X.to(device)
-        batch_pred = model(batch_X).cpu().numpy()
-        all_predictions.append(batch_pred)
+    annual_max_dict[duration] = year_dict
 
-all_predictions = np.vstack(all_predictions)
+# Convert to DataFrame with all years
+all_years = sorted(set().union(*[set(d.keys()) for d in annual_max_dict.values()]))
+annual_max = pd.DataFrame(index=all_years)
 
-# Inverse transform predictions to get actual values
-all_predictions_denorm = scaler.inverse_transform(all_predictions)
-
-# Create a DataFrame with predictions and corresponding dates/years
-prediction_dates = data["date"][seq_length:].reset_index(drop=True)
-prediction_years = data["year"][seq_length:].reset_index(drop=True)
-
-predictions_df = pd.DataFrame(all_predictions_denorm, columns=intensity_columns)
-predictions_df["date"] = prediction_dates
-predictions_df["year"] = prediction_years
-
-# Calculate annual maximum intensities
-annual_max = predictions_df.groupby("year")[intensity_columns].max()
+for duration, year_values in annual_max_dict.items():
+    annual_max[duration] = pd.Series(year_values)
 
 
 def calculate_return_period_intensities(annual_max_series):
@@ -543,7 +548,6 @@ for i, rp in enumerate(return_periods):
         label=f"Empirical T = {rp} years",
     )
 
-plt.xscale("log")
 plt.xlabel("Duration (minutes)", fontsize=12)
 plt.ylabel("Intensity (mm/hr)", fontsize=12)
 plt.title("IDF Curves Comparison: TCN Model vs Empirical", fontsize=14)

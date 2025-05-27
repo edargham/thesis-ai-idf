@@ -120,7 +120,7 @@ frequency_factors = {2: 0.85, 5: 1.15, 10: 1.35, 25: 1.60, 50: 1.80, 100: 2.00}
 
 # Load empirical IDF data for comparison
 empirical_idf = pd.read_csv(os.path.join(
-    os.path.dirname(__file__), "..", "results", "empirical_idf_data.csv"))
+    os.path.dirname(__file__), "..", "results", "idf_data.csv"))
 
 # Generate smooth curves
 durations = np.linspace(5, 1440, 1440//5)  # From 5 minutes to 24 hours
@@ -248,7 +248,6 @@ for return_period in return_periods:
 
 plt.xlabel("Duration (minutes)")
 plt.ylabel("Intensity (mm/h)")
-plt.xscale("log")
 plt.title("Intensity-Duration-Frequency (IDF) Curves using SVR")
 plt.grid(True, which="both", ls="-")
 plt.legend()

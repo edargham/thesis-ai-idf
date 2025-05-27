@@ -103,7 +103,7 @@ frequency_factors = {2: 0.85, 5: 1.15, 10: 1.35, 25: 1.60, 50: 1.80, 100: 2.00}
 # Generate smooth curves
 # Load empirical IDF data for comparison
 empirical_idf = pd.read_csv(os.path.join(
-    os.path.dirname(__file__), "..", "results", "empirical_idf_data.csv"))
+    os.path.dirname(__file__), "..", "results", "idf_data.csv"))
 
 # Generate predictions at specific durations matching the empirical data
 empirical_durations = [5, 10, 15, 30, 60, 180, 1440]  # minutes
@@ -197,7 +197,6 @@ for i, rp in enumerate(return_periods):
     plt.plot(empirical_durations, empirical_values, '--', color=colors[i], 
              marker='o', markersize=5, linewidth=1.5, label=f"Empirical T = {rp} years")
 
-plt.xscale('log')
 plt.xlabel('Duration (minutes)', fontsize=12)
 plt.ylabel('Intensity (mm/hr)', fontsize=12)
 plt.title('IDF Curves Comparison: Linear Regression vs Empirical', fontsize=14)
