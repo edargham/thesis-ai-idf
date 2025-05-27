@@ -3,4 +3,9 @@ data/*.csv
 *.old
 .DS_Store
 *.xlsx
-*.png
+*.pt
+*.pth
+*.zip
+
+src/results/bey-aggregated-final.csv
+src/results/historical_intensity.csv
