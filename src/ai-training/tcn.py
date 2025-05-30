@@ -42,7 +42,58 @@ def create_sequences(data_series, seq_length):
     return np.array(x), np.array(y)
 
 
-seq_length = 32  # Use 32 time steps to predict the next value
+# Configuration dictionary for each duration
+duration_config = {
+    "5mns": {
+        "seq_length": 100,
+        "lr": 0.001,
+        "num_epochs": 200,
+        "batch_size": 4096,
+        "num_channels": [32, 64],
+    },
+    "10mns": {
+        "seq_length": 128,
+        "lr": 0.001,
+        "num_epochs": 200,
+        "batch_size": 4096,
+        "num_channels": [32, 64],
+    },
+    "15mns": {
+        "seq_length": 100,
+        "lr": 0.001,
+        "num_epochs": 250,
+        "batch_size": 4096,
+        "num_channels": [32, 64],
+    },
+    "30mns": {
+        "seq_length": 96,
+        "lr": 0.001,
+        "num_epochs": 200,
+        "batch_size": 16,
+        "num_channels": [32, 64],
+    },
+    "1h": {
+        "seq_length": 80,
+        "lr": 0.001,
+        "num_epochs": 200,
+        "batch_size": 16,
+        "num_channels": [32, 64],
+    },
+    "3h": {
+        "seq_length": 48,
+        "lr": 0.001,
+        "num_epochs": 180,
+        "batch_size": 16,
+        "num_channels": [32, 64, 128],
+    },
+    "24h": {
+        "seq_length": 64,
+        "lr": 0.001,
+        "num_epochs": 200,
+        "batch_size": 16,
+        "num_channels": [32, 64, 128],
+    },
+}
 
 
 class Chomp1d(nn.Module):
@@ -175,15 +226,27 @@ class RainfallTCN(nn.Module):
 
 
 # Train individual models for each duration
-num_epochs = 65  # Reduced for faster training
 models = {}
 predictions = {}
+annual_max_dict = {}
 checkpoint_dir = os.path.join(os.path.dirname(__file__), "..", "checkpoints")
 os.makedirs(checkpoint_dir, exist_ok=True)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 for idx, duration in enumerate(intensity_columns):
     print(f"\nTraining model for {duration}...")
+
+    # Get duration-specific configuration
+    config = duration_config[duration]
+    seq_length = config["seq_length"]
+    learning_rate = config["lr"]
+    num_epochs = config["num_epochs"]
+    batch_size = config["batch_size"]
+    num_channels = config["num_channels"]
+
+    print(
+        f"Using config: seq_length={seq_length}, lr={learning_rate}, epochs={num_epochs}, batch_size={batch_size}, num_channels={num_channels}"
+    )
 
     # Get data for this duration
     # Filter out non-zero values from the original data
@@ -206,26 +269,30 @@ for idx, duration in enumerate(intensity_columns):
 
     # Create model for this duration (1 input feature, 1 output)
     model = RainfallTCN(
-        input_size=1, output_size=1, num_channels=[32, 64], kernel_size=3, dropout=0.2
+        input_size=1,
+        output_size=1,
+        num_channels=num_channels,
+        kernel_size=3,
+        dropout=0.2,
     )
     model.to(device)
 
-    # Setup optimizer and criterion
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    # Setup optimizer and criterion with duration-specific learning rate
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = nn.MSELoss()
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.85, patience=10
     )
 
-    # Training setup
+    # Training setup with duration-specific batch size
     train_dataset = torch.utils.data.TensorDataset(X_train, y_train)
     train_loader = torch.utils.data.DataLoader(
-        dataset=train_dataset, batch_size=128, shuffle=False
+        dataset=train_dataset, batch_size=batch_size, shuffle=False
     )
 
-    # Training loop
+    # Training loop with duration-specific epochs
     best_loss = float("inf")
-    for epoch in range(num_epochs):  # 10 epochs
+    for epoch in range(num_epochs):
         # Training phase
         model.train()
         running_loss = 0.0
@@ -246,9 +313,9 @@ for idx, duration in enumerate(intensity_columns):
         model.eval()
         test_loss = 0.0
         with torch.no_grad():
-            for i in range(0, len(X_test), 128):
-                batch_X = X_test[i : i + 128].to(device)
-                batch_y = y_test[i : i + 128].to(device)
+            for i in range(0, len(X_test), batch_size):
+                batch_X = X_test[i : i + batch_size].to(device)
+                batch_y = y_test[i : i + batch_size].to(device)
                 outputs = model(batch_X)
                 loss = criterion(outputs, batch_y)
                 test_loss += loss.item() * len(batch_X)
@@ -256,10 +323,11 @@ for idx, duration in enumerate(intensity_columns):
         test_loss /= len(X_test)
         scheduler.step(test_loss)
 
-        print(
+        if (epoch + 1) % 20 == 0 or epoch == 0:
+            print(
             f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {running_loss/len(train_loader):.6f}, "
             f"Test Loss: {test_loss:.6f} (LR: {optimizer.param_groups[0]['lr']:.6f})"
-        )
+            )
 
         # Save best model
         if test_loss < best_loss:
@@ -278,20 +346,16 @@ for idx, duration in enumerate(intensity_columns):
         pred_X = torch.FloatTensor(X).transpose(1, 2).to(device)
         duration_preds = []
 
-        for i in range(0, len(pred_X), 128):
-            batch_pred = model(pred_X[i : i + 128]).cpu().numpy()
+        for i in range(0, len(pred_X), batch_size):
+            batch_pred = model(pred_X[i : i + batch_size]).cpu().numpy()
             duration_preds.extend(batch_pred)
 
         predictions[duration] = np.array(duration_preds).flatten()
 
-# Calculate annual maximum intensities separately for each duration
-annual_max_dict = {}
-
-for idx, duration in enumerate(intensity_columns):
-    # Get predictions for this duration
+    # Calculate annual maximum for this duration immediately
     duration_pred = predictions[duration]
 
-    # Get years corresponding to these predictions
+    # Get years corresponding to these predictions (using duration-specific seq_length)
     non_zero_mask = data[duration].values > 0
     years = data["year"][non_zero_mask].values[seq_length:]
 
