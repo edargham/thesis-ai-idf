@@ -73,7 +73,7 @@ duration_config = {
         "num_channels": [32, 64],
     },
     "1h": {
-        "seq_length": 80,
+        "seq_length": 96,
         "lr": 0.001,
         "num_epochs": 200,
         "batch_size": 16,
