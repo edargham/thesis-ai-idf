@@ -59,28 +59,28 @@ duration_config = {
         "num_channels": [32, 64],
     },
     "15mns": {
-        "seq_length": 64,
+        "seq_length": 100,
         "lr": 0.001,
         "num_epochs": 250,
         "batch_size": 4096,
         "num_channels": [32, 64],
     },
     "30mns": {
-        "seq_length": 40,
+        "seq_length": 96,
         "lr": 0.001,
         "num_epochs": 200,
-        "batch_size": 32,
+        "batch_size": 16,
         "num_channels": [32, 64],
     },
     "1h": {
-        "seq_length": 64,
+        "seq_length": 80,
         "lr": 0.001,
         "num_epochs": 200,
         "batch_size": 16,
         "num_channels": [32, 64],
     },
     "3h": {
-        "seq_length": 64,
+        "seq_length": 48,
         "lr": 0.001,
         "num_epochs": 180,
         "batch_size": 16,
@@ -323,10 +323,11 @@ for idx, duration in enumerate(intensity_columns):
         test_loss /= len(X_test)
         scheduler.step(test_loss)
 
-        print(
+        if (epoch + 1) % 20 == 0 or epoch == 0:
+            print(
             f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {running_loss/len(train_loader):.6f}, "
             f"Test Loss: {test_loss:.6f} (LR: {optimizer.param_groups[0]['lr']:.6f})"
-        )
+            )
 
         # Save best model
         if test_loss < best_loss:
