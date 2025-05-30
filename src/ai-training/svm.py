@@ -221,10 +221,10 @@ for i, rp in enumerate(return_periods):
     plt.plot(specific_durations, empirical_values, '--', color=colors[i], 
              marker='o', markersize=5, linewidth=1.5, label=f"Empirical T = {rp} years")
 
-plt.xscale('log')
+# plt.xscale('log')
 plt.xlabel('Duration (minutes)', fontsize=12)
 plt.ylabel('Intensity (mm/hr)', fontsize=12)
-plt.title('IDF Curves Comparison: SVM vs Empirical', fontsize=14)
+plt.title('IDF Curves Comparison: SVM vs Gumbel', fontsize=14)
 plt.grid(True, which="both", ls="-")
 
 # Add metrics as text
