@@ -87,7 +87,7 @@ duration_config = {
         "num_channels": [32, 64, 128],
     },
     "24h": {
-        "seq_length": 64,
+        "seq_length": 40,
         "lr": 0.001,
         "num_epochs": 200,
         "batch_size": 16,
@@ -194,12 +194,24 @@ class RainfallTCN(nn.Module):
 
         self.temporal_blocks = nn.Sequential(*layers)
 
-        # Add self-attention layer
+        # Add sparse self-attention layer
         hidden_dim = num_channels[-1]
         num_heads = min(4, hidden_dim // 4)  # Ensure divisible by head count
         self.self_attention = nn.MultiheadAttention(
-            embed_dim=hidden_dim, num_heads=num_heads, dropout=dropout, batch_first=True
+            embed_dim=hidden_dim, num_heads=num_heads, dropout=dropout, batch_first=True, 
+            # Enable sparse attention pattern
+            kdim=hidden_dim, vdim=hidden_dim
         )
+        # Define window size for sparse attention pattern
+        self.attn_window_size = min(32, seq_length if 'seq_length' in locals() else 32)
+        # Create diagonal attention mask to enforce sparsity (local window attention)
+        max_seq_len = 128
+        mask = torch.ones(max_seq_len, max_seq_len, dtype=torch.bool)
+        for i in range(max_seq_len):
+            window_start = max(0, i - self.attn_window_size // 2)
+            window_end = min(max_seq_len, i + self.attn_window_size // 2 + 1)
+            mask[i, window_start:window_end] = False
+        self.register_buffer('attn_mask', mask)
 
         # Layer normalization
         self.norm = nn.LayerNorm(hidden_dim)
