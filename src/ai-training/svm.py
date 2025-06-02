@@ -118,8 +118,8 @@ print(f"NSE: {nse:.2f}")
 return_periods = [2, 5, 10, 25, 50, 100]
 frequency_factors = {2: 0.85, 5: 1.15, 10: 1.35, 25: 1.60, 50: 1.80, 100: 2.00}
 
-# Load empirical IDF data for comparison
-empirical_idf = pd.read_csv(os.path.join(
+# Load gumbel IDF data for comparison
+gumbel_idf = pd.read_csv(os.path.join(
     os.path.dirname(__file__), "..", "results", "idf_data.csv"))
 
 # Generate smooth curves
@@ -142,7 +142,7 @@ for return_period in return_periods:
     intensities_rp = base_intensities * frequency_factors[return_period]
     idf_curves[return_period] = intensities_rp
 
-# Sample specific durations for comparison with empirical data
+# Sample specific durations for comparison with gumbel data
 specific_durations = [5, 10, 15, 30, 60, 180, 1440]
 duration_mapping = {
     0: "5 mins",
@@ -161,15 +161,15 @@ r2_values = []
 
 
 for rp in return_periods:
-    empirical_row = empirical_idf[empirical_idf["Return Period (years)"] == rp].iloc[0]
+    gumbel_row = gumbel_idf[gumbel_idf["Return Period (years)"] == rp].iloc[0]
     
-    # Extract values from empirical data for this return period
+    # Extract values from gumbel data for this return period
     y_true = []
     y_pred = []
     
     for i, duration in enumerate(specific_durations):
-        empirical_col = duration_mapping[i]
-        y_true.append(empirical_row[empirical_col])
+        gumbel_col = duration_mapping[i]
+        y_true.append(gumbel_row[gumbel_col])
         
         # Find the closest duration in our predictions
         duration_idx = np.abs(durations - duration).argmin()
@@ -203,23 +203,22 @@ print(f"\nOverall RMSE: {overall_rmse:.4f}")
 print(f"Overall MAE: {overall_mae:.4f}")
 print(f"Overall R2: {overall_r2:.4f}")
 
-# Create a figure to compare model predictions with empirical data
-plt.figure(figsize=(14, 10))
+# Create a figure to compare model predictions with gumbel data
+plt.figure(figsize=(10, 6))
 
 # Define colors for different return periods
 colors = ['blue', 'green', 'red', 'purple', 'orange', 'brown']
 
-# Plot both model predictions and empirical data for comparison
+# Plot both model predictions and gumbel data for comparison
 for i, rp in enumerate(return_periods):
     # Model prediction (solid line)
     plt.plot(durations, idf_curves[rp], '-', color=colors[i], 
-             linewidth=2, label=f"Model T = {rp} years")
+             linewidth=2, label=f"SVM T = {rp} years")
     
-    # Empirical data (dashed line with markers)
-    empirical_row = empirical_idf[empirical_idf["Return Period (years)"] == rp].iloc[0]
-    empirical_values = [empirical_row[duration_mapping[j]] for j in range(len(specific_durations))]
-    plt.plot(specific_durations, empirical_values, '--', color=colors[i], 
-             marker='o', markersize=5, linewidth=1.5, label=f"Empirical T = {rp} years")
+    # gumbel data (dashed line with markers)
+    gumbel_row = gumbel_idf[gumbel_idf["Return Period (years)"] == rp].iloc[0]
+    gumbel_values = [gumbel_row[duration_mapping[j]] for j in range(len(specific_durations))]
+    plt.plot(specific_durations, gumbel_values, '--', color=colors[i], linewidth=1.5, label=f"Gumbel T = {rp} years")
 
 # plt.xscale('log')
 plt.xlabel('Duration (minutes)', fontsize=12)

@@ -73,7 +73,7 @@ duration_config = {
         "num_channels": [32, 64],
     },
     "1h": {
-        "seq_length": 92,
+        "seq_length": 90,
         "lr": 0.001,
         "num_epochs": 200,
         "batch_size": 16,
@@ -416,10 +416,10 @@ def calculate_return_period_intensities(annual_max_series):
 
     n = len(sorted_intensities)  # Recalculate n after filtering
 
-    # Calculate empirical return periods using Weibull formula: T = (n+1)/m
+    # Calculate gumbel return periods using Weibull formula: T = (n+1)/m
     # where n is the number of years and m is the rank
     ranks = np.arange(1, n + 1)
-    empirical_return_periods = (n + 1) / ranks
+    gumbel_return_periods = (n + 1) / ranks
 
     # Interpolate to get intensities for desired return periods
     return_periods = [2, 5, 10, 25, 50, 100]
@@ -431,16 +431,16 @@ def calculate_return_period_intensities(annual_max_series):
     # Ensure all values are positive before taking log
     intensity_array = np.maximum(np.array(sorted_intensities), epsilon)
     log_intensities = np.log(intensity_array)
-    log_rp = np.log(empirical_return_periods)
+    log_rp = np.log(gumbel_return_periods)
 
     try:
         # Use all data points for a more robust extrapolation model
         # Fit a polynomial of degree 1 (line) to log-log data
         coef = np.polyfit(log_rp, log_intensities, 1)
 
-        # Sort the empirical data for proper interpolation
-        interp_order = np.argsort(empirical_return_periods)
-        sorted_rp = empirical_return_periods[interp_order]
+        # Sort the gumbel data for proper interpolation
+        interp_order = np.argsort(gumbel_return_periods)
+        sorted_rp = gumbel_return_periods[interp_order]
         sorted_intensity = np.array(sorted_intensities)[interp_order]
 
         # Create results with a proper mix of model and interpolation
@@ -453,7 +453,7 @@ def calculate_return_period_intensities(annual_max_series):
             result[rp] = model_value
 
             # For return periods within the observed range, blend model prediction with interpolation
-            if min(empirical_return_periods) <= rp <= max(empirical_return_periods):
+            if min(gumbel_return_periods) <= rp <= max(gumbel_return_periods):
                 interp_value = np.interp(rp, sorted_rp, sorted_intensity)
                 # Blend model and interpolation with varying weights based on return period
                 # Use more model influence for longer return periods
@@ -465,7 +465,7 @@ def calculate_return_period_intensities(annual_max_series):
     except (ValueError, np.linalg.LinAlgError):
         # Fallback for any numerical errors - use simple linear interpolation
         for rp in return_periods:
-            if rp <= max(empirical_return_periods):
+            if rp <= max(gumbel_return_periods):
                 # Direct interpolation for return periods in range
                 result[rp] = np.interp(rp, sorted_rp, sorted_intensity)
             else:
@@ -480,12 +480,12 @@ idf_data = {}
 for duration in intensity_columns:
     idf_data[duration] = calculate_return_period_intensities(annual_max[duration])
 
-# Load empirical IDF data for comparison
-empirical_idf = pd.read_csv(
-    "/home/edargham/devenv/thesis-ai-idf/src/results/empirical_idf_data.csv"
+# Load gumbel IDF data for comparison
+gumbel_idf = pd.read_csv(
+    "/home/edargham/devenv/thesis-ai-idf/src/results/idf_data.csv"
 )
 
-# Map model durations to empirical durations
+# Map model durations to gumbel durations
 duration_mapping = {
     "5mns": "5 mins",
     "10mns": "10 mins",
@@ -514,20 +514,20 @@ mae_values = []
 r2_values = []
 
 for rp in return_periods:
-    empirical_row = empirical_idf[empirical_idf["Return Period (years)"] == rp].iloc[0]
+    gumbel_row = gumbel_idf[gumbel_idf["Return Period (years)"] == rp].iloc[0]
 
-    # Extract values from empirical data and model predictions for this return period
+    # Extract values from gumbel data and model predictions for this return period
     y_true = []
     y_pred = []
 
     for model_col in intensity_columns:
-        empirical_col = duration_mapping[model_col]
-        empirical_value = empirical_row[empirical_col]
+        gumbel_col = duration_mapping[model_col]
+        gumbel_value = gumbel_row[gumbel_col]
         model_value = idf_data[model_col][rp]
 
         # Only include valid pairs of values
-        if np.isfinite(empirical_value) and np.isfinite(model_value):
-            y_true.append(empirical_value)
+        if np.isfinite(gumbel_value) and np.isfinite(model_value):
+            y_true.append(gumbel_value)
             y_pred.append(model_value)
 
     # Check if we have enough valid data to calculate metrics
@@ -548,15 +548,15 @@ mae_values = []
 r2_values = []
 
 for rp in return_periods:
-    empirical_row = empirical_idf[empirical_idf["Return Period (years)"] == rp].iloc[0]
+    gumbel_row = gumbel_idf[gumbel_idf["Return Period (years)"] == rp].iloc[0]
 
-    # Extract values from empirical data and model predictions for this return period
+    # Extract values from gumbel data and model predictions for this return period
     y_true = []
     y_pred = []
 
     for model_col in intensity_columns:
-        empirical_col = duration_mapping[model_col]
-        y_true.append(empirical_row[empirical_col])
+        gumbel_col = duration_mapping[model_col]
+        y_true.append(gumbel_row[gumbel_col])
         y_pred.append(idf_data[model_col][rp])
 
     # Calculate metrics
@@ -589,13 +589,13 @@ print(f"\nOverall RMSE: {overall_rmse:.4f}")
 print(f"Overall MAE: {overall_mae:.4f}")
 print(f"Overall R2: {overall_r2:.4f}")
 
-# Create a figure to compare model predictions with empirical data
-plt.figure(figsize=(14, 10))
+# Create a figure to compare model predictions with gumbel data
+plt.figure(figsize=(10, 6))
 
 # Define colors for different return periods
 colors = ["blue", "green", "red", "purple", "orange", "brown"]
 
-# Plot both model predictions and empirical data for comparison
+# Plot both model predictions and gumbel data for comparison
 for i, rp in enumerate(return_periods):
     # Model prediction (solid line)
     model_intensities = [idf_data[model_col][rp] for model_col in intensity_columns]
@@ -608,25 +608,23 @@ for i, rp in enumerate(return_periods):
         label=f"Model T = {rp} years",
     )
 
-    # Empirical data (dashed line with markers)
-    empirical_row = empirical_idf[empirical_idf["Return Period (years)"] == rp].iloc[0]
-    empirical_values = [
-        empirical_row[duration_mapping[model_col]] for model_col in intensity_columns
+    # gumbel data (dashed line with markers)
+    gumbel_row = gumbel_idf[gumbel_idf["Return Period (years)"] == rp].iloc[0]
+    gumbel_values = [
+        gumbel_row[duration_mapping[model_col]] for model_col in intensity_columns
     ]
     plt.plot(
         duration_values.values(),
-        empirical_values,
+        gumbel_values,
         "--",
         color=colors[i],
-        marker="o",
-        markersize=5,
         linewidth=1.5,
-        label=f"Empirical T = {rp} years",
+        label=f"Gumbel T = {rp} years",
     )
 
 plt.xlabel("Duration (minutes)", fontsize=12)
 plt.ylabel("Intensity (mm/hr)", fontsize=12)
-plt.title("IDF Curves Comparison: TCN Model vs Empirical", fontsize=14)
+plt.title("IDF Curves Comparison: TCN Model vs Gumbel", fontsize=14)
 plt.grid(True, which="both", ls="-")
 
 # Add metrics as text
@@ -647,6 +645,24 @@ plt.tight_layout()
 plt.savefig(
     os.path.join(os.path.dirname(__file__), "..", "figures", "idf_comparison_tcn.png"),
     dpi=300,
+)
+
+plt.figure(figsize=(10, 6))
+for i, rp in enumerate(return_periods):
+    model_intensities = [idf_data[model_col][rp] for model_col in intensity_columns]
+    plt.plot(duration_values.values(), model_intensities, color=colors[i], 
+             label=f"{rp}-year return period")
+
+plt.xlabel("Duration (minutes)")
+plt.ylabel("Rainfall Intensity (mm/hr)")
+plt.title("Intensity-Duration-Frequency (IDF) Curves\nGenerated by TCN")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(
+    os.path.join(os.path.dirname(__file__), "..", "figures", "idf_curves_tcn.png"), 
+    dpi=300, 
+    bbox_inches="tight"
 )
 
 # Create a table of IDF values

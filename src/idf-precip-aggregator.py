@@ -144,19 +144,18 @@ for j, dur in enumerate(durations):
 
 
 # Plot the IDF curves similar to ann.py
-plt.figure(figsize=(14, 10))
+plt.figure(figsize=(10, 6))
 
 # Define colors for different return periods
 colors = ['blue', 'green', 'red', 'purple', 'orange', 'brown']
 
 plt.tight_layout()
 output_dir = os.path.join(os.path.dirname(__file__), "figures")
-plt.savefig(os.path.join(output_dir, "idf_gumbel.png"), dpi=300)
 
 # Original IDF curve plot (simplified version)
 plt.figure(figsize=(10, 6))
 for i, rp in enumerate(return_periods):
-    plt.plot(duration_hours, intensities_gum[i], marker="o", label=f"{rp}-year")
+    plt.plot(duration_hours, intensities_gum[i], label=f"{rp}-year")
 
 plt.xlabel("Duration (minutes)")
 plt.ylabel("Rainfall Intensity (mm/hr)")
