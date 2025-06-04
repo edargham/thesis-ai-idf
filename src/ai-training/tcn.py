@@ -21,8 +21,37 @@ if torch.cuda.is_available():
 
 class UltraEfficientTCN(nn.Module):
     """
-    Ultra-efficient TCN: ~265 parameters, R² = 0.995342
-    Best overall efficiency with target performance
+    Ultra-efficient Temporal Convolutional Network for IDF curve generation.
+    
+    This model achieves high performance (~R² = 0.995342) with minimal parameters (~265).
+    It uses a lightweight architecture with only 2 dilated convolutional layers,
+    residual connections, and global average pooling for maximum efficiency.
+    
+    Architecture:
+        - Input: 2 features (log return period, log duration) × sequence length
+        - Conv1D layer with dilation=1
+        - Conv1D layer with dilation=2
+        - Residual connection
+        - Global average pooling
+        - Linear output layer
+    
+    Args:
+        input_size (int, optional): Number of input features. Defaults to 2.
+        hidden_size (int, optional): Number of hidden channels in conv layers. Defaults to 8.
+        dropout (float, optional): Dropout probability for regularization. Defaults to 0.05.
+    
+    Attributes:
+        conv1 (nn.Conv1d): First dilated convolutional layer
+        conv2 (nn.Conv1d): Second dilated convolutional layer with higher dilation
+        relu (nn.ReLU): ReLU activation function
+        dropout (nn.Dropout): Dropout layer for regularization
+        global_pool (nn.AdaptiveAvgPool1d): Global average pooling layer
+        fc (nn.Linear): Final linear layer for output
+    
+    Example:
+        >>> model = UltraEfficientTCN(input_size=2, hidden_size=8, dropout=0.05)
+        >>> x = torch.randn(32, 2, 3)  # batch_size=32, features=2, seq_len=3
+        >>> output = model(x)  # Shape: (32, 1)
     """
 
     def __init__(
@@ -47,6 +76,16 @@ class UltraEfficientTCN(nn.Module):
         self._init_weights()
 
     def _init_weights(self):
+        """
+        Initialize model weights using appropriate initialization schemes.
+        
+        Uses Kaiming normal initialization for convolutional layers (good for ReLU)
+        and Xavier normal initialization for linear layers. All biases are
+        initialized to zero.
+        
+        Note:
+            This method is called automatically during model initialization.
+        """
         for m in self.modules():
             if isinstance(m, nn.Conv1d):
                 nn.init.kaiming_normal_(m.weight)
@@ -56,6 +95,25 @@ class UltraEfficientTCN(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass through the Ultra-Efficient TCN.
+        
+        Processes input sequences through dilated convolutions with residual
+        connections, applies global pooling, and produces intensity predictions.
+        
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, input_size, seq_length)
+                            representing scaled log features over time sequences.
+        
+        Returns:
+            torch.Tensor: Predicted log intensities of shape (batch_size, 1).
+                         These are scaled values that need inverse transformation
+                         to get actual rainfall intensities.
+        
+        Note:
+            The residual connection helps with gradient flow and model training
+            stability, especially important for temporal sequence modeling.
+        """
         # First conv layer
         x1 = self.relu(self.conv1(x))
         x1 = self.dropout(x1)
@@ -76,8 +134,39 @@ class UltraEfficientTCN(nn.Module):
 
 class LightweightAttentionTCN(nn.Module):
     """
-    Lightweight TCN with attention: ~1,697 parameters
-    For comparing attention vs no-attention approaches
+    Lightweight Temporal Convolutional Attention Network (TCAN) for IDF curves.
+    
+    This model extends the basic TCN with multi-head attention mechanisms
+    to capture long-range dependencies in temporal sequences. Uses ~1,697
+    parameters while maintaining high accuracy through attention-enhanced
+    feature learning.
+    
+    Architecture:
+        - Input: 2 features × sequence length
+        - Two dilated Conv1D layers
+        - Multi-head self-attention (2 heads)
+        - Residual connections
+        - Global average pooling
+        - Linear output layer
+    
+    Args:
+        input_size (int, optional): Number of input features. Defaults to 2.
+        hidden_size (int, optional): Number of hidden channels. Defaults to 12.
+        dropout (float, optional): Dropout probability. Defaults to 0.1.
+    
+    Attributes:
+        conv1 (nn.Conv1d): First dilated convolutional layer
+        conv2 (nn.Conv1d): Second dilated convolutional layer
+        attention (nn.MultiheadAttention): Multi-head attention mechanism
+        relu (nn.ReLU): ReLU activation function
+        dropout (nn.Dropout): Dropout layer for regularization
+        global_pool (nn.AdaptiveAvgPool1d): Global average pooling
+        fc (nn.Linear): Final output layer
+    
+    Example:
+        >>> model = LightweightAttentionTCN(input_size=2, hidden_size=12)
+        >>> x = torch.randn(32, 2, 3)  # batch_size=32, features=2, seq_len=3
+        >>> output = model(x)  # Shape: (32, 1)
     """
 
     def __init__(
@@ -107,6 +196,16 @@ class LightweightAttentionTCN(nn.Module):
         self._init_weights()
 
     def _init_weights(self):
+        """
+        Initialize model weights using appropriate initialization schemes.
+        
+        Uses Kaiming normal initialization for convolutional layers and
+        Xavier normal initialization for linear layers. Attention weights
+        are initialized by PyTorch's default scheme.
+        
+        Note:
+            This method is called automatically during model initialization.
+        """
         for m in self.modules():
             if isinstance(m, nn.Conv1d):
                 nn.init.kaiming_normal_(m.weight)
@@ -116,6 +215,25 @@ class LightweightAttentionTCN(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass through the Lightweight Attention TCN.
+        
+        Processes sequences through dilated convolutions, applies multi-head
+        attention for temporal dependency modeling, and produces predictions
+        with residual connections for improved gradient flow.
+        
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, input_size, seq_length)
+                            containing scaled log-transformed features.
+        
+        Returns:
+            torch.Tensor: Predicted scaled log intensities of shape (batch_size, 1).
+                         Requires inverse transformation to obtain actual intensities.
+        
+        Note:
+            The attention mechanism helps capture relationships between different
+            temporal positions, which can be valuable for modeling rainfall patterns.
+        """
         # Conv layers
         x1 = self.relu(self.conv1(x))
         x2 = self.relu(self.conv2(x1))
@@ -138,7 +256,45 @@ class LightweightAttentionTCN(nn.Module):
 
 class IDFDataset(Dataset):
     """
-    Optimally prepared dataset using lessons learned from models
+    Optimized PyTorch Dataset for IDF curve modeling with TCN/TCAN architectures.
+    
+    This dataset combines annual maximum rainfall data with target IDF values,
+    applying logarithmic transformations, feature scaling, and intelligent
+    weighting strategies to optimize model training performance.
+    
+    Key Features:
+        - Combines annual maxima and target IDF data
+        - Applies log transformations for better numerical stability
+        - Heavy weighting of target IDF data points
+        - Standardized feature scaling
+        - Sequence-based data preparation for temporal models
+    
+    Args:
+        annual_max_data (pd.DataFrame): Annual maximum rainfall intensities
+                                      with duration columns (5mns, 10mns, etc.)
+        idf_target_data (pd.DataFrame): Target IDF curve data with return periods
+                                      and duration columns (5 mins, 10 mins, etc.)
+        seq_length (int, optional): Length of temporal sequences. Defaults to 3.
+        target_weight (float, optional): Weight multiplier for target IDF data.
+                                       Defaults to 10.0.
+    
+    Attributes:
+        seq_length (int): Length of temporal sequences for TCN input
+        target_weight (float): Weighting factor for target data importance
+        feature_scaler (StandardScaler): Scaler for input features
+        target_scaler (StandardScaler): Scaler for target intensities
+        features_scaled (np.ndarray): Scaled input features
+        targets_scaled (np.ndarray): Scaled target values
+        weights (np.ndarray): Sample weights for training
+    
+    Example:
+        >>> dataset = IDFDataset(annual_max_data, idf_target_data, 
+        ...                     seq_length=3, target_weight=10.0)
+        >>> dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+        >>> for features, targets, weights in dataloader:
+        ...     # features: (batch_size, feature_dim, seq_length)
+        ...     # targets: (batch_size, 1)
+        ...     # weights: (batch_size,)
     """
 
     def __init__(
@@ -155,8 +311,34 @@ class IDFDataset(Dataset):
     def prepare_data(
         self, annual_max_data: pd.DataFrame, idf_target_data: pd.DataFrame
     ):
-        """TCN/TCAN data preparation with heavy target data weighting"""
-
+        """
+        Prepare and process training data from annual maxima and target IDF data.
+        
+        This method combines data from two sources, applies transformations,
+        and creates a weighted training dataset optimized for TCN training.
+        The process includes:
+        1. Data cleaning and validation
+        2. Return period calculation from annual maxima
+        3. Duration mapping and standardization
+        4. Logarithmic transformations
+        5. Feature scaling
+        6. Weight assignment for balanced training
+        
+        Args:
+            annual_max_data (pd.DataFrame): Annual maximum intensities with columns
+                                          like '5mns', '10mns', '15mns', etc.
+            idf_target_data (pd.DataFrame): Target IDF data with 'Return Period (years)'
+                                          and duration columns like '5 mins', '10 mins', etc.
+        
+        Note:
+            - Annual maxima are processed using Weibull plotting positions
+            - Target IDF data receives higher weights for training priority
+            - All intensity values are log-transformed for numerical stability
+            - Features are standardized to zero mean and unit variance
+        
+        Raises:
+            ValueError: If data contains invalid values (negative, zero, or NaN)
+        """
         annual_max_data = annual_max_data.dropna()
         idf_target_data = idf_target_data.dropna()
 
@@ -271,9 +453,38 @@ class IDFDataset(Dataset):
         )
 
     def __len__(self):
+        """
+        Get the total number of samples in the dataset.
+        
+        Returns:
+            int: Number of training samples available.
+        """
         return len(self.features_scaled)
 
     def __getitem__(self, idx: int):
+        """
+        Get a single training sample by index.
+        
+        Creates a temporal sequence by replicating features across the sequence
+        length, which is suitable for TCN architectures that expect temporal
+        input patterns.
+        
+        Args:
+            idx (int): Index of the sample to retrieve (0 <= idx < len(dataset))
+        
+        Returns:
+            tuple: A tuple containing:
+                - x (torch.Tensor): Input features of shape (feature_dim, seq_length)
+                  containing scaled log-transformed return period and duration
+                - y (torch.Tensor): Target intensity of shape (1,) containing
+                  scaled log-transformed rainfall intensity
+                - w (torch.Tensor): Sample weight as scalar tensor for loss weighting
+        
+        Note:
+            The sequence is created by tiling the same feature vector across
+            the temporal dimension, which works well for the IDF modeling task
+            where temporal patterns are less critical than feature relationships.
+        """
         features = self.features_scaled[idx]
         target = self.targets_scaled[idx]
         weight = self.weights[idx]
@@ -290,7 +501,28 @@ class IDFDataset(Dataset):
     def inverse_transform_intensity(
         self, scaled_log_intensity: np.ndarray
     ) -> np.ndarray:
-        """Convert scaled log-intensity back to original intensity"""
+        """
+        Convert scaled log-intensity predictions back to original intensity units.
+        
+        This method reverses the preprocessing pipeline to convert model outputs
+        back to interpretable rainfall intensity values in mm/hr.
+        
+        Args:
+            scaled_log_intensity (np.ndarray): Scaled log-transformed intensities
+                                             from model predictions, shape (n_samples, 1)
+        
+        Returns:
+            np.ndarray: Original rainfall intensities in mm/hr, shape (n_samples, 1)
+        
+        Note:
+            The transformation sequence is:
+            1. Inverse standardization (scaled -> log intensity)
+            2. Exponential transformation (log intensity -> intensity)
+        
+        Example:
+            >>> scaled_pred = model(input_features)
+            >>> actual_intensity = dataset.inverse_transform_intensity(scaled_pred)
+        """
         log_intensity = self.target_scaler.inverse_transform(scaled_log_intensity)
         return np.exp(log_intensity)
 
@@ -302,7 +534,45 @@ def train_model(
     **model_kwargs: dict,
 ):
     """
-    Train a model with optimal configuration
+    Train a TCN or TCAN model with optimal hyperparameters and training strategies.
+    
+    This function implements a comprehensive training pipeline including:
+    - Train/test data splitting
+    - Weighted loss computation for balanced learning
+    - Advanced optimization with AdamW and cosine annealing
+    - Early stopping with patience
+    - Gradient clipping for training stability
+    - Model checkpointing
+    
+    Args:
+        model_class (type): The model class to instantiate (UltraEfficientTCN or LightweightAttentionTCN)
+        model_name (str): Human-readable name for the model (used in logging)
+        dataset (Dataset): The prepared IDFDataset containing training data
+        **model_kwargs (dict): Additional keyword arguments passed to model constructor
+    
+    Returns:
+        tuple: A tuple containing:
+            - model (nn.Module): The trained model with best weights loaded
+            - param_count (int): Total number of trainable parameters
+    
+    Training Configuration:
+        - Optimizer: AdamW with learning rate 0.001 and weight decay 1e-5
+        - Scheduler: Cosine annealing with warm restarts (T_0=100, T_mult=2)
+        - Loss: Weighted MSE loss for handling sample importance
+        - Batch size: 32 for memory efficiency
+        - Max epochs: 1000 with early stopping (patience=150)
+        - Gradient clipping: Max norm of 1.0
+    
+    Example:
+        >>> model, param_count = train_model(
+        ...     UltraEfficientTCN, "TCN", dataset, 
+        ...     input_size=2, hidden_size=8, dropout=0.05
+        ... )
+        >>> print(f"Model trained with {param_count} parameters")
+    
+    Note:
+        The function automatically uses GPU if available and implements
+        comprehensive error handling for NaN losses and training instabilities.
     """
     print(f"\n=== Training {model_name} ===")
 
@@ -427,7 +697,40 @@ def evaluate_model(
     model_name: str,
 ):
     """
-    Comprehensive evaluation of TCN models
+    Comprehensive evaluation of trained TCN/TCAN models on IDF curve generation.
+    
+    This function evaluates model performance by:
+    1. Generating IDF curves for standard return periods and durations
+    2. Comparing predictions with target Gumbel distribution data
+    3. Computing comprehensive regression metrics (RMSE, MAE, R²)
+    4. Providing detailed performance analysis and target achievement status
+    
+    Args:
+        model (nn.Module): Trained TCN or TCAN model for evaluation
+        dataset (Dataset): IDFDataset containing scaling parameters for inverse transformation
+        model_name (str): Human-readable model name for logging and reporting
+    
+    Returns:
+        tuple: A tuple containing:
+            - rmse (float): Root Mean Square Error between predictions and targets
+            - mae (float): Mean Absolute Error between predictions and targets  
+            - r2 (float): R-squared coefficient of determination
+            - predicted_curves (dict): Dictionary mapping return periods to intensity lists
+    
+    Evaluation Details:
+        - Return periods: [2, 5, 10, 25, 50, 100] years
+        - Durations: [5, 10, 15, 30, 60, 180, 1440] minutes
+        - Metrics computed on all return period × duration combinations
+        - Target achievement threshold: R² > 0.99
+    
+    Example:
+        >>> rmse, mae, r2, curves = evaluate_model(model, dataset, "TCN")
+        >>> print(f"Model R² = {r2:.6f}, Target achieved: {r2 > 0.99}")
+        >>> print(f"10-year, 60-min intensity: {curves[10][4]:.2f} mm/hr")
+    
+    Note:
+        The function loads target IDF data from '../results/idf_data.csv'
+        and assumes standard duration column naming conventions.
     """
     print(f"\n=== Evaluating {model_name} ===")
 
@@ -491,8 +794,44 @@ def generate_idf_curves(
     return_periods: list[int],
     durations_hours: list[float],
 ):
-    """Generate IDF curves for evaluation"""
-
+    """
+    Generate IDF curves using a trained model for specified return periods and durations.
+    
+    This function creates intensity predictions for all combinations of return
+    periods and durations, properly handling feature scaling and inverse
+    transformations to produce meaningful rainfall intensity values.
+    
+    Args:
+        model (nn.Module): Trained TCN or TCAN model in evaluation mode
+        dataset (Dataset): IDFDataset containing feature scalers and preprocessing parameters
+        return_periods (list[int]): List of return periods in years (e.g., [2, 5, 10, 25, 50, 100])
+        durations_hours (list[float]): List of rainfall durations in hours 
+                                     (e.g., [5/60, 10/60, 15/60, 0.5, 1.0, 3.0, 24.0])
+    
+    Returns:
+        dict: Dictionary mapping return periods to lists of intensities:
+              {return_period: [intensity_1, intensity_2, ..., intensity_n]}
+              where intensities correspond to the input durations_hours list
+    
+    Process:
+        1. For each (return_period, duration) combination:
+           - Apply log transformation to inputs
+           - Scale features using dataset's feature scaler
+           - Create temporal sequence for TCN input
+           - Generate model prediction
+           - Apply inverse transformation to get actual intensity
+    
+    Example:
+        >>> return_periods = [2, 5, 10, 25, 50, 100]
+        >>> durations = [5/60, 10/60, 15/60, 30/60, 1.0, 3.0, 24.0]
+        >>> curves = generate_idf_curves(model, dataset, return_periods, durations)
+        >>> # curves[10] contains intensities for 10-year return period
+        >>> # curves[10][0] is intensity for 5-minute duration
+    
+    Note:
+        The model must be in evaluation mode and the dataset must contain
+        properly fitted feature and target scalers from training.
+    """
     model.eval()
     device = next(model.parameters()).device
 
@@ -534,8 +873,38 @@ def generate_smooth_idf_curves(
     return_periods: list[int],
     smooth_durations_hours: np.ndarray,
 ):
-    """Generate smooth IDF curves for better visualization"""
-
+    """
+    Generate smooth IDF curves with high-resolution duration sampling for visualization.
+    
+    This function creates smooth, continuous-looking IDF curves by evaluating
+    the model at many closely-spaced duration points, producing publication-quality
+    plots with smooth curves instead of connected discrete points.
+    
+    Args:
+        model (nn.Module): Trained TCN or TCAN model in evaluation mode
+        dataset (Dataset): IDFDataset with fitted scalers for data preprocessing
+        return_periods (list[int]): Return periods in years for curve generation
+        smooth_durations_hours (np.ndarray): High-resolution array of durations in hours
+                                           (e.g., np.linspace(5/60, 24, 288) for 5-minute resolution)
+    
+    Returns:
+        dict: Dictionary mapping return periods to arrays of intensities:
+              {return_period: [intensity_array]} where intensity arrays have the same
+              length as smooth_durations_hours for smooth curve plotting
+    
+    Usage:
+        This function is specifically designed for creating publication-quality
+        plots where smooth curves are preferred over discrete point connections.
+        
+    Example:
+        >>> smooth_durations = np.linspace(5/60, 24, 288)  # 5-minute resolution
+        >>> smooth_curves = generate_smooth_idf_curves(model, dataset, [2,5,10], smooth_durations)
+        >>> plt.plot(smooth_durations*60, smooth_curves[10], label='10-year')
+    
+    Note:
+        The computational cost scales linearly with the number of duration points,
+        so balance resolution needs with performance requirements.
+    """
     model.eval()
     device = next(model.parameters()).device
 
@@ -572,8 +941,40 @@ def generate_smooth_idf_curves(
 
 
 def create_individual_model_plots(results: dict, dataset: Dataset):
-    """Create individual plots for each model matching ANN style"""
-
+    """
+    Create individual comparison and IDF curve plots for each trained model.
+    
+    This function generates two types of plots for each model:
+    1. Comparison plots showing model predictions vs. target Gumbel data
+    2. Clean IDF curve plots showing only model predictions
+    
+    Both plot types are saved as high-resolution PNG files and displayed.
+    
+    Args:
+        results (dict): Dictionary containing evaluation results for each model:
+                       {model_name: (rmse, mae, r2, predicted_curves)}
+        dataset (Dataset): IDFDataset used for training (not directly used but maintained for consistency)
+    
+    Generated Files:
+        For each model, creates:
+        - idf_comparison_{model_name}.png: Model vs Gumbel comparison
+        - idf_curves_{model_name}.png: Clean model-only IDF curves
+        
+    Plot Features:
+        - Professional styling with grid, legend, and metric annotations
+        - Color-coded return periods (consistent across all plots)
+        - High-resolution (300 DPI) output suitable for publications
+        - Automatic safe filename generation from model names
+    
+    Example:
+        >>> results = {"TCN": (0.1, 0.05, 0.995, curves_dict)}
+        >>> create_individual_model_plots(results, dataset)
+        # Creates: idf_comparison_tcn.png and idf_curves_tcn.png
+    
+    Note:
+        Plots are saved to '../figures/' directory, which is created if it doesn't exist.
+        The function displays plots interactively and provides console feedback about saved files.
+    """
     # Load target data
     idf_target_path = os.path.join(
         os.path.dirname(__file__), "..", "results", "idf_data.csv"
@@ -693,8 +1094,44 @@ def create_individual_model_plots(results: dict, dataset: Dataset):
 
 
 def create_smooth_individual_plots(results: dict, models_dict: dict, dataset: dict):
-    """Create individual plots with smooth curves for each model"""
-
+    """
+    Create individual plots with smooth, high-resolution curves for each trained model.
+    
+    This function generates professional-quality plots with smooth curves by
+    evaluating models at high-resolution duration intervals. Creates both
+    comparison and standalone IDF curve plots with publication-ready quality.
+    
+    Args:
+        results (dict): Model evaluation results:
+                       {model_name: (rmse, mae, r2, discrete_predicted_curves)}
+        models_dict (dict): Dictionary of trained model objects:
+                           {model_name: trained_model_instance}
+        dataset (Dataset): IDFDataset containing scalers and preprocessing parameters
+    
+    Generated Output:
+        For each model in models_dict:
+        - High-resolution comparison plots (model vs Gumbel with smooth curves)  
+        - Clean IDF curve plots with smooth model predictions only
+        - 300 DPI PNG files suitable for academic publications
+        - Interactive plot display with console progress feedback
+    
+    Smooth Curve Details:
+        - Duration resolution: 5-minute intervals from 5 to 1440 minutes
+        - Total points: 288 evaluation points per return period curve
+        - Smooth curve interpolation using model predictions
+        - Professional styling with consistent color schemes
+    
+    Example:
+        >>> results = {"TCN": (rmse, mae, r2, curves)}
+        >>> models = {"TCN": trained_tcn_model}
+        >>> create_smooth_individual_plots(results, models, dataset)
+        # Generates smooth, publication-ready plots for the TCN model
+    
+    Note:
+        This function is computationally more expensive than create_individual_model_plots
+        due to high-resolution curve generation, but produces superior visual quality
+        for presentations and publications.
+    """
     # Load target data
     idf_target_path = os.path.join(
         os.path.dirname(__file__), "..", "results", "idf_data.csv"
@@ -824,7 +1261,57 @@ def create_smooth_individual_plots(results: dict, models_dict: dict, dataset: di
 
 def main():
     """
-    Main function to run TCN/TCAN model comparison
+    Main execution function for TCN/TCAN model training, evaluation, and comparison.
+    
+    This function orchestrates the complete machine learning pipeline:
+    1. Data loading and preprocessing
+    2. Dataset creation with optimal parameters  
+    3. Model training for both TCN and TCAN architectures
+    4. Comprehensive model evaluation and metrics computation
+    5. Visualization generation with comparison and individual plots
+    6. Model checkpoint saving for future use
+    7. Results summary and analysis reporting
+    
+    Pipeline Details:
+        - Loads annual maximum and target IDF data from CSV files
+        - Creates optimized IDFDataset with sequence length=3 and target weighting=10x
+        - Trains Ultra-Efficient TCN (~265 parameters) and Lightweight Attention TCN (~1,697 parameters)
+        - Evaluates both models against R² > 0.99 performance target
+        - Generates publication-quality plots and saves model checkpoints
+        - Exports comprehensive results to CSV for further analysis
+    
+    File Operations:
+        Input files (expected in '../results/'):
+        - annual_max_intensity.csv: Historical rainfall maxima
+        - idf_data.csv: Target IDF curve data from Gumbel analysis
+        
+        Output files generated:
+        - Model checkpoints in '../checkpoints/' (*.pt files)
+        - Comparison plots in '../figures/' (*.png files)  
+        - Results summary in '../results/tcn_models_results.csv'
+    
+    Model Configurations:
+        TCN: Ultra-efficient architecture with 8 hidden units, 0.05 dropout
+        TCAN: Attention-enhanced version with 12 hidden units, 0.1 dropout
+    
+    Success Criteria:
+        - Both models achieve R² > 0.99 on IDF curve generation
+        - Parameter efficiency analysis (parameters vs. performance)
+        - Comprehensive error metrics (RMSE, MAE, R²)
+    
+    Example:
+        >>> # Run the complete pipeline
+        >>> main()
+        === Training TCN ===
+        Model parameters: 265
+        === Training TCAN ===  
+        Model parameters: 1,697
+        🎯 All models successfully demonstrate efficient architectures achieving R² > 0.99!
+    
+    Note:
+        This function assumes the data files exist in the expected locations
+        and will create output directories as needed. The complete execution
+        typically takes 10-20 minutes depending on hardware.
     """
     # Load data
     annual_max_path = os.path.join(
