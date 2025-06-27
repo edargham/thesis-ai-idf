@@ -1,0 +1,22 @@
+\subsection{Gumbel Distribution}
+For the baseline, the Gumbel distribution is used to construct the IDF curves for each duration and return period.
+The Gumbel distribution, also known as the extreme value type I distribution, is widely used in hydrological applications for modeling annual maximum precipitation values and constructing intensity-duration-frequency (IDF) curves and is particularly suitable for extreme precipitation analysis as it represents the limiting distribution of the maximum of a large number of independent and identically distributed exponential-type random variables~\cite{}.
+The Gumbel distribution is defined by its cumulative distribution function (CDF) and probability density function (PDF):
+
+\begin{equation}
+F(x) = e^{-e^{-(x - \mu)/\beta}}
+\end{equation}
+
+\begin{equation}
+f(x) = \frac{1}{\beta} e^{-(x - \mu)/\beta} e^{-e^{-(x - \mu)/\beta}}
+\end{equation}
+
+where:
+\begin{itemize}
+  \item $x$ is the precipitation intensity value.
+  \item $\mu$ is the location parameter.
+  \item $\beta$ is the scale parameter.
+\end{itemize}
+The parameters $\mu$ and $\beta$ are estimated from the maximum precipitation value for each year and duration using the method of moments or maximum likelihood estimation (MLE).
+
+Once the parameters are estimated, the Gumbel distribution can be used to derive the IDF curves for each duration and return period.

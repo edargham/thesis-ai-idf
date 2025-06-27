@@ -1,7 +1,12 @@
-\section{Methodology}
+\section{Materials and Methods}
+This study employs remotely sensed, high-resolution precipitation data to develop IDF curves for return periods between 2, 5, 10, 25, 50, and 100 years. Both the traditional Gumbel distribution and advanced machine learning approaches—including Support Vector Machines (SVM), Dense Artificial Neural Networks (ANN), and Temporal Convolutional Neural Networks (TCN)—are trained for this purpose.
 
-This study employs remotely sensed high-resolution precipitation data to generate the IDF curves using Gumbel and machine learning-based methods, including Support Vector Machines (SVM), Dense Artificial Neural Networks (ANN), and Temporal Convolutional Neural Networks (TCN).To achieve this, high-resolution precipitation data were obtained from the Global Precipitation Map (GPM) Integrated Multi-SatellitE Retrievals for GPM (IMERG) satellite product, which is then processed to extract the maximum precipitation values for each year in each duration. The data is then used to fit the Gumbel distribution and train the machine learning models. The performance of the models is evaluated using metrics such as Mean Absolute Error (MAE), Root Mean Square Error (RMSE), and R-squared (R²) values.
+To achieve this, high-resolution precipitation data were obtained from the Global Precipitation Map (GPM) Integrated Multi-SatellitE Retrievals for GPM (IMERG) satellite product, which is then processed to extract the maximum precipitation values for each year in each duration. The data is then used to fit the Gumbel distribution and train the machine learning models. The performance of the models is evaluated using metrics such as Mean Absolute Error (MAE), Root Mean Square Error (RMSE), and R-squared (R²) values.
 
 \input{sect-methodology/sect-sources/sources}
 
 \input{sect-methodology/sect-preprocessing/preprocessing}
+
+\input{sect-methodology/sect-models/gumbel}
+
+\input{sect-methodology/sect-models/ml-models}
