@@ -1,7 +1,7 @@
 \documentclass[
   12pt,
   a4paper,
-  % twocolumn,
+  twocolumn,
 ]{article}
 
 \usepackage[utf8]{inputenc}
@@ -22,12 +22,16 @@
 \renewcommand{\headrulewidth}{0pt}
 \setlength{\parindent}{0pt}
 \begin{document}
-\maketitle
 
+\onecolumn
+\maketitle
 \input{abstract/abstract.tex}
+\twocolumn
+
 \input{sect-introduction/intro}
 \input{sect-methodology/methodology}
 
 \bibliographystyle{IEEEtran}
+\onecolumn
 \bibliography{references}
 \end{document}
