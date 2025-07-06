@@ -1,4 +1,11 @@
 \subsection{Construction and Training}
+The IDF curves are constructed using the Gumbel Distribution which was fitted to the yearly maximum intensities using the maximum likelihood estimation (MLE) method for each duration to detrmine the location and scale parameters.
+Using these parameters, The return period intensities were calculated through the Gumbel inverse cumlative distribution function, resulting in IDF curves that serve as the statistical benchmark for evaluating the ML models.
 
+\vspace{1em}
 
-To train the machine learning models, we take as input the duration of the event, and as output the maximum intensity of the duration for a year in the dataset. The year is dropped from the input as it impeaches the model from properly learning the duration-intensity patterns~\cite{14}. For TCNs and TCANs, the data rearranged into proper sequences as input. Additionally, 60\% of the data is allocated for fitting the models to the data and 40\% for validating the models to ensure the models properly generalize.
+To train the ML and DL models, we take as input the duration of the event, and as output the maximum intensity of the duration for a year in the dataset. The year is dropped from the input as it prevents the model from properly learning the duration-intensity patterns~\cite{14}. For TCNs and TCANs, the data rearranged into proper sequences as input. Additionally, 60\% of the data is allocated for fitting the models to the data and 40\% for validating the models to ensure the models properly generalize. 
+
+\vspace{1em}
+
+For each ML and DL model, the detailed hyperparameter configuration used for training will be provided in the following sections, as well as the optimization strategies and validation procedures to ensure reproducibility and robust model performance.
