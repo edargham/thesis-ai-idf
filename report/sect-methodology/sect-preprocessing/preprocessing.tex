@@ -11,4 +11,4 @@ where:
   \item $t$ is the time period for which we want to derive the precipitation value.
   \item $T$ is the time period for which we have the precipitation value.
 \end{itemize}
-The derived precipitation time-series are then converted to intensities by dividing the precipitation values by the time period in hours and the maximum intensity for every year in the dataset is extracted for each duration. The maximum intensities is subsequently used to construct the IDF curves using the Gumbel distribution and train the machine learning models.
+The derived precipitation time-series are then converted to intensities by dividing the precipitation values by the time period in hours, from which the maximum intensity for every year in the dataset is extracted for each duration. Subsequently, these maximum intensities are used to construct the IDF curves using the Gumbel distribution and train the machine learning models.
