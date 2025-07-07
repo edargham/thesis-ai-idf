@@ -1,0 +1,23 @@
+\subsubsection{Artificial Neural Networks (ANN)}
+
+The ANN model was trained to predict the log-transformed annual maximum rainfall intensity using both the log-transformed event duration and log-transformed return period as inputs. The dataset was standardized and split into 50\% for training and 50\% for validation to ensure robust generalization. The neural network architecture consisted of two hidden layers with 24 neurons each, ReLU activations, and dropout regularization to prevent overfitting.
+
+\vspace{1em}
+
+Model training was performed using the Adam optimizer with a learning rate of 0.0001 over 2500 epochs, minimizing mean squared error loss. After training, predictions were inverse-transformed and exponentiated to recover the original intensity scale. Model performance was evaluated using RMSE, MAE, and R² metrics across all return periods, and the resulting ANN-based IDF curves were compared visually and quantitatively against the Gumbel-distribution-based benchmarks.
+
+\vspace{1em}
+
+The selected hyperparameters for the ANN model are as follows:
+
+\begin{align*}
+\text{Hidden Layers} &: 2 \\
+\text{Neurons per Layer} &: 24 \\
+\text{Activation} &: \text{ReLU} \\
+\text{Dropout Rate} &: 0.2 \\
+\text{Optimizer} &: \text{Adam} \\
+\text{Learning Rate} &: 0.0001 \\
+\text{Epochs} &: 2500 \\
+\end{align*}
+
+The UAT states that a feedforward neural network with at least one hidden layer and a sufficient number of neurons can approximate any continuous function on a compact domain. As a result, ANNs are particularly well-suited for predicting IDF curves, even when the underlying hydrological processes are highly nonlinear and difficult to model analytically.
