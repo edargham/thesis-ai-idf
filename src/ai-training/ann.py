@@ -345,6 +345,48 @@ for rp in return_periods:
 
     smooth_idf_curves[rp] = intensities
 
+# Save IDF curves to CSV for standard durations only
+standard_durations_minutes = [5, 10, 15, 30, 60, 180, 1440]
+standard_durations_hours = [d / 60.0 for d in standard_durations_minutes]
+
+# Generate curves for standard durations only
+standard_idf_curves = {}
+for rp in return_periods:
+    intensities = []
+    for dur in standard_durations_hours:
+        # Apply log and scaling transformations
+        log_dur = np.log(dur + 1e-6).reshape(-1, 1)
+        log_rp = np.log(rp + 1e-6).reshape(-1, 1)
+
+        scaled_dur = scaler_duration.transform(log_dur)
+        scaled_rp = scaler_rp.transform(log_rp)
+
+        # Prepare input for model
+        x = np.concatenate([scaled_dur, scaled_rp], axis=1)
+        x_tensor = torch.tensor(x, dtype=torch.float32).to(device)
+
+        # Get prediction
+        with torch.no_grad():
+            y_scaled = model(x_tensor)
+
+        # Convert back to original scale
+        intensity = idf_dataset.inverse_transform_intensity(y_scaled.cpu().numpy())
+        intensities.append(float(intensity))
+
+    standard_idf_curves[rp] = intensities
+
+# Save standard IDF curves to CSV
+idf_df_data = {'Duration (minutes)': standard_durations_minutes}
+for rp in return_periods:
+    idf_df_data[f'{rp}-year'] = standard_idf_curves[rp]
+
+idf_df = pd.DataFrame(idf_df_data)
+csv_path = os.path.join(
+    os.path.dirname(__file__), "..", "results", "idf_curves_ANN.csv"
+)
+idf_df.to_csv(csv_path, index=False)
+print(f"IDF curves data saved to: {csv_path}")
+
 # Calculate metrics (RMSE, MAE, R2) for each return period
 rmse_values = []
 mae_values = []
@@ -398,7 +440,7 @@ colors = ['blue', 'green', 'red', 'purple', 'orange', 'brown']
 
 # Plot both model predictions and empirical data for comparison
 for i, rp in enumerate(return_periods):
-    # Model prediction (solid line)
+    # Model prediction (solid line) - use smooth curves
     plt.plot(smooth_durations_minutes, smooth_idf_curves[rp], '-', color=colors[i], 
              linewidth=2, label=f"ANN T = {rp} years")
     
@@ -426,6 +468,7 @@ plt.savefig(
     os.path.join(os.path.dirname(__file__), "..", "figures", "idf_comparison_ann.png"),
     dpi=300,
 )
+print(f"Comparison plot saved to: {os.path.join(os.path.dirname(__file__), '..', 'figures', 'idf_comparison_ann.png')}")
 
 # Original IDF curve plot - using smooth curves
 plt.figure(figsize=(10, 6))
@@ -444,3 +487,4 @@ plt.savefig(
     dpi=300, 
     bbox_inches="tight"
 )
+print(f"IDF curves plot saved to: {os.path.join(os.path.dirname(__file__), '..', 'figures', 'idf_curves_ann.png')}")

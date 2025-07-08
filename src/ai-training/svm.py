@@ -142,6 +142,31 @@ for return_period in return_periods:
     intensities_rp = base_intensities * frequency_factors[return_period]
     idf_curves[return_period] = intensities_rp
 
+# Save IDF curves to CSV for standard durations only
+standard_durations_minutes = [5, 10, 15, 30, 60, 180, 1440]
+
+# Generate curves for standard durations only
+standard_idf_curves = {}
+for return_period in return_periods:
+    standard_intensities = []
+    for duration in standard_durations_minutes:
+        # Find the closest duration in our predictions
+        duration_idx = np.abs(durations - duration).argmin()
+        standard_intensities.append(idf_curves[return_period][duration_idx])
+    standard_idf_curves[return_period] = standard_intensities
+
+# Save standard IDF curves to CSV
+idf_df_data = {'Duration (minutes)': standard_durations_minutes}
+for rp in return_periods:
+    idf_df_data[f'{rp}-year'] = standard_idf_curves[rp]
+
+idf_df = pd.DataFrame(idf_df_data)
+csv_path = os.path.join(
+    os.path.dirname(__file__), "..", "results", "idf_curves_SVM.csv"
+)
+idf_df.to_csv(csv_path, index=False)
+print(f"IDF curves data saved to: {csv_path}")
+
 # Sample specific durations for comparison with gumbel data
 specific_durations = [5, 10, 15, 30, 60, 180, 1440]
 duration_mapping = {
@@ -239,6 +264,7 @@ plt.savefig(
     os.path.join(os.path.dirname(__file__), "..", "figures", "idf_comparison_svm.png"),
     dpi=300,
 )
+print(f"Comparison plot saved to: {os.path.join(os.path.dirname(__file__), '..', 'figures', 'idf_comparison_svm.png')}")
 
 # Original IDF curve plot
 plt.figure(figsize=(10, 6))
@@ -255,3 +281,4 @@ plt.savefig(
     os.path.join(os.path.dirname(__file__), "..", "figures", "idf_curves_svm.png"),
     dpi=300,
 )
+print(f"IDF curves plot saved to: {os.path.join(os.path.dirname(__file__), '..', 'figures', 'idf_curves_svm.png')}")

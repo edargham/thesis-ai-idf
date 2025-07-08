@@ -1167,6 +1167,26 @@ def create_smooth_individual_plots(results: dict, models_dict: dict, dataset: di
             model, dataset, return_periods, smooth_durations_hours
         )
 
+        # Save IDF curves to CSV for standard durations only
+        standard_durations_minutes = [5, 10, 15, 30, 60, 180, 1440]
+        standard_durations_hours = [d / 60.0 for d in standard_durations_minutes]
+        
+        # Generate curves for standard durations only
+        standard_curves = generate_idf_curves(
+            model, dataset, return_periods, standard_durations_hours
+        )
+        
+        idf_df_data = {'Duration (minutes)': standard_durations_minutes}
+        for rp in return_periods:
+            idf_df_data[f'{rp}-year'] = standard_curves[rp]
+        
+        idf_df = pd.DataFrame(idf_df_data)
+        csv_path = os.path.join(
+            os.path.dirname(__file__), "..", "results", f"idf_curves_{model_name}.csv"
+        )
+        idf_df.to_csv(csv_path, index=False)
+        print(f"IDF curves data saved to: {csv_path}")
+
         # 1. Comparison plot (model vs Gumbel) with smooth curves
         plt.figure(figsize=(10, 6))
 
