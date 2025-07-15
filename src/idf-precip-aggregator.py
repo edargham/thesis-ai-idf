@@ -116,7 +116,7 @@ if __name__ == "__main__":
     ]
 
     # Drop all the rows with dates after 2019-12-31 23:59:59
-    df = df[df.index < "2019-12-31 23:59:59"]
+    # df = df[df.index < "2019-12-31 23:59:59"]
 
     # Fill NaN values with 0
     df.fillna(0, inplace=True)
