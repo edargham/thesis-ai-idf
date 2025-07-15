@@ -8,3 +8,5 @@
 
 # Don't ignore directories to recurse into them
 !*/
+
+!figures
