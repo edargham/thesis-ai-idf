@@ -29,7 +29,7 @@ class IDFModelEvaluator:
             if model_name == 'Gumbel':
                 # Gumbel data has different structure - transpose it
                 df = df.set_index('Return Period (years)').T
-                df.index = [5, 10, 15, 30, 60, 180, 1440]  # Duration in minutes
+                df.index = [5, 10, 15, 30, 60, 90, 120, 180, 360, 720, 900, 1080, 1440]  # Duration in minutes
                 df.index.name = 'Duration (minutes)'
             else:
                 # Other models have duration as first column
@@ -43,8 +43,8 @@ class IDFModelEvaluator:
     
     def calculate_historical_statistics(self):
         """Calculate statistical measures from historical data"""
-        durations = ['5mns', '10mns', '15mns', '30mns', '1h', '3h', '24h']
-        duration_minutes = [5, 10, 15, 30, 60, 180, 1440]
+        durations = ['5mns', '10mns', '15mns', '30mns', '1h', '90min', '2h', '3h', '6h', '12h', '15h', '18h', '24h']
+        duration_minutes = [5, 10, 15, 30, 60, 90, 120, 180, 360, 720, 900, 1080, 1440]
         
         historical_stats = {}
         
@@ -222,14 +222,14 @@ class IDFModelEvaluator:
         
         # 4. Historical data distribution
         ax4 = axes[1, 0]
-        durations = ['5mns', '10mns', '15mns', '30mns', '1h', '3h', '24h']
+        durations = ['5mns', '10mns', '15mns', '30mns', '1h', '90min', '2h', '3h', '6h', '12h', '15h', '18h', '24h']
         for duration in durations:
             if duration in self.historical_data.columns:
                 ax4.hist(self.historical_data[duration], alpha=0.6, label=duration, bins=15)
         ax4.set_title('Historical Data Distribution', fontweight='bold')
         ax4.set_xlabel('Intensity (mm/h)')
         ax4.set_ylabel('Frequency')
-        ax4.legend()
+        ax4.legend(fontsize=8, ncol=2)
         
         # 5. Model predictions vs historical estimates
         ax5 = axes[1, 1]
@@ -288,14 +288,26 @@ class IDFModelEvaluator:
         
         print("\n1. HISTORICAL DATA SUMMARY")
         print("-" * 40)
+        
+        # Create duration labels dictionary
+        duration_labels = {
+            5: "5 minutes",
+            10: "10 minutes",
+            15: "15 minutes",
+            30: "30 minutes",
+            60: "1 hour",
+            90: "90 minutes",
+            120: "2 hours",
+            180: "3 hours",
+            360: "6 hours",
+            720: "12 hours",
+            900: "15 hours",
+            1080: "18 hours",
+            1440: "24 hours"
+        }
+        
         for duration_min, data_stats in historical_stats.items():
-            duration_label = f"{duration_min} minutes"
-            if duration_min == 60:
-                duration_label = "1 hour"
-            elif duration_min == 180:
-                duration_label = "3 hours"
-            elif duration_min == 1440:
-                duration_label = "24 hours"
+            duration_label = duration_labels.get(duration_min, f"{duration_min} minutes")
             
             print(f"\n{duration_label}:")
             print(f"  Mean: {data_stats['mean']:.2f} mm/h")

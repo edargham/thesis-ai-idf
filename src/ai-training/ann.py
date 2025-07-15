@@ -15,91 +15,84 @@ warnings.filterwarnings("ignore")
 np.random.seed(368683)
 torch.manual_seed(368683)
 
-# Load the data
-data_path = os.path.join(
-    os.path.dirname(__file__), "..", "results", "historical_intensity.csv"
+# Load the data - change input file to annual_max_intensity.csv
+input_file = os.path.join(
+    os.path.dirname(__file__), "..", "results", "annual_max_intensity.csv"
 )
 
-df = pd.read_csv(data_path)
+df = pd.read_csv(input_file)
 
-# Convert date to datetime
-df["date"] = pd.to_datetime(df["date"])
-print(f"Data spans from {df['date'].min()} to {df['date'].max()}")
-print(f"Total data points: {len(df)}")
+# Extract intensity data for all durations
+data_5mns = df["5mns"].values
+data_10mns = df["10mns"].values
+data_15mns = df["15mns"].values
+data_30mns = df["30mns"].values
+data_1h = df["1h"].values
+data_90min = df["90min"].values
+data_2h = df["2h"].values
+data_3h = df["3h"].values
+data_6h = df["6h"].values
+data_12h = df["12h"].values
+data_15h = df["15h"].values
+data_18h = df["18h"].values
+data_24h = df["24h"].values
 
-# Add year column if not present
-if "year" not in df.columns:
-    df["year"] = df["date"].dt.year
+# Create DataFrames for each duration
+df_5mns = pd.DataFrame({"duration": 5, "intensity": data_5mns})
+df_10mns = pd.DataFrame({"duration": 10, "intensity": data_10mns})
+df_15mns = pd.DataFrame({"duration": 15, "intensity": data_15mns})
+df_30mns = pd.DataFrame({"duration": 30, "intensity": data_30mns})
+df_1h = pd.DataFrame({"duration": 60, "intensity": data_1h})
+df_90min = pd.DataFrame({"duration": 90, "intensity": data_90min})
+df_2h = pd.DataFrame({"duration": 120, "intensity": data_2h})
+df_3h = pd.DataFrame({"duration": 180, "intensity": data_3h})
+df_6h = pd.DataFrame({"duration": 360, "intensity": data_6h})
+df_12h = pd.DataFrame({"duration": 720, "intensity": data_12h})
+df_15h = pd.DataFrame({"duration": 900, "intensity": data_15h})
+df_18h = pd.DataFrame({"duration": 1080, "intensity": data_18h})
+df_24h = pd.DataFrame({"duration": 1440, "intensity": data_24h})
 
-# Extract annual maximum intensities for each duration
-durations = ["5mns", "10mns", "15mns", "30mns", "1h", "3h", "24h"]
-years = df["year"].unique()
-print(f"Years covered: {min(years)} to {max(years)} ({len(years)} years)")
+# Combine all DataFrames
+combined_df = pd.concat(
+    [df_5mns, df_10mns, df_15mns, df_30mns, df_1h, df_90min, df_2h, df_3h,
+     df_6h, df_12h, df_15h, df_18h, df_24h], ignore_index=True
+)
 
-annual_maxima = pd.DataFrame(columns=["year"] + durations)
-annual_maxima["year"] = sorted(years)
+# Transform the data to make the relationship linear
+# For IDF relationships, a log-log transformation is common
+combined_df["log_duration"] = np.log(combined_df["duration"])
+combined_df["log_intensity"] = np.log(combined_df["intensity"])
 
-for duration in durations:
-    for year in years:
-        year_data = df[df["year"] == year][duration]
-        annual_maxima.loc[annual_maxima["year"] == year, duration] = year_data.max()
+# Load empirical IDF data for comparison and training targets
+idf_data = pd.read_csv(os.path.join(
+    os.path.dirname(__file__), "..", "results", "idf_data.csv"))
 
-print("\nAnnual Maximum Intensities:")
-print(annual_maxima.head())
+# Create dataset for training
+durations_minutes = [5, 10, 15, 30, 60, 90, 120, 180, 360, 720, 900, 1080, 1440]
+return_periods = [2, 5, 10, 25, 50, 100]
 
+# Create a dataset with duration-return period-intensity triplets from IDF data
+training_data = []
 
-# Calculate empirical return periods using Weibull formula
-def calculate_empirical_return_periods(annual_max_data):
-    """Calculate empirical return periods for each data point using Weibull plotting position."""
-    data_with_rp = []
+for rp in return_periods:
+    row = idf_data[idf_data["Return Period (years)"] == rp].iloc[0]
+    for i, duration in enumerate(durations_minutes):
+        column_name = f"{duration} mins" if duration != 60 else "60 mins"
+        intensity = row[column_name]
+        training_data.append({
+            "duration": duration,
+            "return_period": rp,
+            "intensity": intensity
+        })
 
-    for duration in durations:
-        # Sort data in descending order
-        sorted_data = annual_max_data.sort_values(
-            by=duration, ascending=False
-        ).reset_index(drop=True)
-        n = len(sorted_data)
-
-        # Calculate return periods using Weibull formula: T = (n+1)/m
-        # where n is the record length and m is the rank
-        sorted_data["rank"] = range(1, n + 1)
-        sorted_data["return_period"] = (n + 1) / sorted_data["rank"]
-
-        # Keep only relevant columns
-        result = sorted_data[["year", duration, "return_period"]].copy()
-        result["duration"] = duration
-        result.rename(columns={duration: "intensity"}, inplace=True)
-
-        data_with_rp.append(result)
-
-    # Combine data for all durations
-    return pd.concat(data_with_rp, ignore_index=True)
-
-
-# Create dataset with empirical return periods
-empirical_data = calculate_empirical_return_periods(annual_maxima)
-print("\nEmpirical Return Periods:")
-print(empirical_data.head())
-
-# Map duration strings to numeric hours for model training
-duration_mapping = {
-    "5mns": 5 / 60,
-    "10mns": 10 / 60,
-    "15mns": 0.25,
-    "30mns": 0.5,
-    "1h": 1.0,
-    "3h": 3.0,
-    "24h": 24.0,
-}
-empirical_data["duration_hours"] = empirical_data["duration"].map(duration_mapping)
-
+idf_training_df = pd.DataFrame(training_data)
 
 # Create a PyTorch dataset for the IDF relationship
 class IDFDataset(Dataset):
     def __init__(
         self,
         dataframe,
-        duration_col="duration_hours",
+        duration_col="duration",
         rp_col="return_period",
         intensity_col="intensity",
     ):
@@ -145,7 +138,7 @@ class IDFDataset(Dataset):
 
 
 # Create dataset and split into train/test
-idf_dataset = IDFDataset(empirical_data)
+idf_dataset = IDFDataset(idf_training_df)
 train_size = int(0.5 * len(idf_dataset))
 test_size = len(idf_dataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(
@@ -156,7 +149,6 @@ train_dataset, test_dataset = torch.utils.data.random_split(
 batch_size = 16
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
 
 # Define the neural network model for IDF curve generation
 class IDFModel(nn.Module):
@@ -235,13 +227,13 @@ scaler_duration, scaler_rp, scaler_intensity = idf_dataset.get_scalers()
 
 
 # Generate IDF curves for specific return periods
-def generate_idf_curve(model, return_periods, durations_hours):
+def generate_idf_curve(model, return_periods, durations_minutes):
     model.eval()
     idf_curves = {}
 
     for rp in return_periods:
         intensities = []
-        for dur in durations_hours:
+        for dur in durations_minutes:
             # Apply log and scaling transformations
             log_dur = np.log(dur + 1e-6).reshape(-1, 1)
             log_rp = np.log(rp + 1e-6).reshape(-1, 1)
@@ -267,14 +259,12 @@ def generate_idf_curve(model, return_periods, durations_hours):
 
 
 # Generate IDF curves
-return_periods = [2, 5, 10, 25, 50, 100]
-durations_hours = [5/60, 10/60, 0.25, 0.5, 1, 3, 24]  # 5min, 10min, 15min, 30min, 1h, 3h, 24h
-durations_minutes = [5, 10, 15, 30, 60, 180, 1440]  # For plotting
+standard_durations_minutes = [5, 10, 15, 30, 60, 90, 120, 180, 360, 720, 900, 1080, 1440]
 
-idf_curves = generate_idf_curve(model, return_periods, durations_hours)
+idf_curves = generate_idf_curve(model, return_periods, standard_durations_minutes)
 
 # Convert to DataFrame for easier handling
-idf_df = pd.DataFrame({"Duration_hours": durations_hours})
+idf_df = pd.DataFrame({"Duration_minutes": standard_durations_minutes})
 
 for rp in return_periods:
     idf_df[f"T{rp}"] = idf_curves[rp]
@@ -290,18 +280,20 @@ display_df = pd.DataFrame(
         "10min": [idf_curves[rp][1] for rp in return_periods],
         "15min": [idf_curves[rp][2] for rp in return_periods],
         "30min": [idf_curves[rp][3] for rp in return_periods],
-        "1h": [idf_curves[rp][4] for rp in return_periods],
-        "3h": [idf_curves[rp][5] for rp in return_periods],
-        "24h": [idf_curves[rp][6] for rp in return_periods],
+        "60min": [idf_curves[rp][4] for rp in return_periods],
+        "90min": [idf_curves[rp][5] for rp in return_periods],
+        "120min": [idf_curves[rp][6] for rp in return_periods],
+        "180min": [idf_curves[rp][7] for rp in return_periods],
+        "360min": [idf_curves[rp][8] for rp in return_periods],
+        "720min": [idf_curves[rp][9] for rp in return_periods],
+        "900min": [idf_curves[rp][10] for rp in return_periods],
+        "1080min": [idf_curves[rp][11] for rp in return_periods],
+        "1440min": [idf_curves[rp][12] for rp in return_periods],
     }
 )
 
 print("\nIDF Table - Intensity (mm/hr):")
 print(display_df)
-
-# Load empirical IDF data for comparison
-empirical_idf = pd.read_csv(os.path.join(
-    os.path.dirname(__file__), "..", "results", "idf_data.csv"))
 
 # Map durations in our model to the columns in empirical data
 duration_mapping = {
@@ -310,20 +302,25 @@ duration_mapping = {
     2: "15 mins",
     3: "30 mins",
     4: "60 mins",
-    5: "180 mins",
-    6: "1440 mins"
+    5: "90 mins",
+    6: "120 mins",
+    7: "180 mins",
+    8: "360 mins",
+    9: "720 mins",
+    10: "900 mins",
+    11: "1080 mins",
+    12: "1440 mins"
 }
 
 # Generate smooth curves
 smooth_durations_minutes = np.linspace(5, 1440, 1440//5)  # From 5 minutes to 24 hours
-smooth_durations_hours = smooth_durations_minutes / 60.0
 
 # Generate smooth IDF curves for different return periods
 smooth_idf_curves = {}
 
 for rp in return_periods:
     intensities = []
-    for dur in smooth_durations_hours:
+    for dur in smooth_durations_minutes:
         # Apply log and scaling transformations
         log_dur = np.log(dur + 1e-6).reshape(-1, 1)
         log_rp = np.log(rp + 1e-6).reshape(-1, 1)
@@ -346,39 +343,9 @@ for rp in return_periods:
     smooth_idf_curves[rp] = intensities
 
 # Save IDF curves to CSV for standard durations only
-standard_durations_minutes = [5, 10, 15, 30, 60, 180, 1440]
-standard_durations_hours = [d / 60.0 for d in standard_durations_minutes]
-
-# Generate curves for standard durations only
-standard_idf_curves = {}
-for rp in return_periods:
-    intensities = []
-    for dur in standard_durations_hours:
-        # Apply log and scaling transformations
-        log_dur = np.log(dur + 1e-6).reshape(-1, 1)
-        log_rp = np.log(rp + 1e-6).reshape(-1, 1)
-
-        scaled_dur = scaler_duration.transform(log_dur)
-        scaled_rp = scaler_rp.transform(log_rp)
-
-        # Prepare input for model
-        x = np.concatenate([scaled_dur, scaled_rp], axis=1)
-        x_tensor = torch.tensor(x, dtype=torch.float32).to(device)
-
-        # Get prediction
-        with torch.no_grad():
-            y_scaled = model(x_tensor)
-
-        # Convert back to original scale
-        intensity = idf_dataset.inverse_transform_intensity(y_scaled.cpu().numpy())
-        intensities.append(float(intensity))
-
-    standard_idf_curves[rp] = intensities
-
-# Save standard IDF curves to CSV
 idf_df_data = {'Duration (minutes)': standard_durations_minutes}
 for rp in return_periods:
-    idf_df_data[f'{rp}-year'] = standard_idf_curves[rp]
+    idf_df_data[f'{rp}-year'] = idf_curves[rp]
 
 idf_df = pd.DataFrame(idf_df_data)
 csv_path = os.path.join(
@@ -393,13 +360,13 @@ mae_values = []
 r2_values = []
 
 for rp in return_periods:
-    empirical_row = empirical_idf[empirical_idf["Return Period (years)"] == rp].iloc[0]
+    empirical_row = idf_data[idf_data["Return Period (years)"] == rp].iloc[0]
     
     # Extract values from empirical data and model predictions for this return period
     y_true = []
     y_pred = []
     
-    for i in range(len(durations_hours)):
+    for i in range(len(standard_durations_minutes)):
         empirical_col = duration_mapping[i]
         y_true.append(empirical_row[empirical_col])
         y_pred.append(idf_curves[rp][i])
@@ -445,9 +412,9 @@ for i, rp in enumerate(return_periods):
              linewidth=2, label=f"ANN T = {rp} years")
     
     # Empirical data (dashed line with markers)
-    empirical_row = empirical_idf[empirical_idf["Return Period (years)"] == rp].iloc[0]
-    empirical_values = [empirical_row[duration_mapping[j]] for j in range(len(durations_hours))]
-    plt.plot(durations_minutes, empirical_values, '--', color=colors[i], linewidth=1.5, 
+    empirical_row = idf_data[idf_data["Return Period (years)"] == rp].iloc[0]
+    empirical_values = [empirical_row[duration_mapping[j]] for j in range(len(standard_durations_minutes))]
+    plt.plot(standard_durations_minutes, empirical_values, '--', color=colors[i], linewidth=1.5, 
              label=f"Gumbel T = {rp} years")
 
 plt.xlabel('Duration (minutes)', fontsize=12)
@@ -455,6 +422,39 @@ plt.ylabel('Intensity (mm/hr)', fontsize=12)
 plt.title('IDF Curves Comparison: Neural Network vs Gumbel', fontsize=14)
 plt.grid(True, which="both", ls="-")
 
+# Add metrics as text
+plt.text(0.02, 0.98, f"RMSE: {overall_rmse:.4f}\nMAE: {overall_mae:.4f}\nR²: {overall_r2:.4f}",
+         transform=plt.gca().transAxes, fontsize=10, verticalalignment='top',
+         bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+# Adjust legend to avoid crowding
+plt.legend(loc='upper right', fontsize=9)
+
+plt.tight_layout()
+plt.savefig(
+    os.path.join(os.path.dirname(__file__), "..", "figures", "idf_comparison_ann.png"),
+    dpi=300,
+)
+print(f"Comparison plot saved to: {os.path.join(os.path.dirname(__file__), '..', 'figures', 'idf_comparison_ann.png')}")
+
+# Original IDF curve plot - using smooth curves
+plt.figure(figsize=(10, 6))
+for i, rp in enumerate(return_periods):
+    plt.plot(smooth_durations_minutes, smooth_idf_curves[rp], color=colors[i], 
+             label=f"{rp}-year return period")
+
+plt.xlabel("Duration (minutes)")
+plt.ylabel("Rainfall Intensity (mm/hr)")
+plt.title("Intensity-Duration-Frequency (IDF) Curves\nGenerated by Neural Network")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(
+    os.path.join(os.path.dirname(__file__), "..", "figures", "idf_curves_ann.png"), 
+    dpi=300, 
+    bbox_inches="tight"
+)
+print(f"IDF curves plot saved to: {os.path.join(os.path.dirname(__file__), '..', 'figures', 'idf_curves_ann.png')}")
 # Add metrics as text
 plt.text(0.02, 0.98, f"RMSE: {overall_rmse:.4f}\nMAE: {overall_mae:.4f}\nR²: {overall_r2:.4f}",
          transform=plt.gca().transAxes, fontsize=10, verticalalignment='top',

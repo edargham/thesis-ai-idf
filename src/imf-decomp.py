@@ -7,13 +7,13 @@ file_path = os.path.join(
     os.path.dirname(__file__), "data", "gpm-bey-30mns.csv"
 )
 df = pd.read_csv(file_path, parse_dates=["date"])
-df["value"] = df["value"] / 0.5
+df["value"] = df["value"] #/ 0.5
 
 
-# Function to apply Bell's ratio for intensities
-def apply_bells_ratio_intensity(intensity_T, t, T, n=(1/3)):
+# Function to apply IMF decomposition for intensities
+def apply_imf_decomp_intensity(intensity_T, t, T, n=(1/3)):
     """
-    Apply Bell's ratio for intensities.
+    Apply IMF decomposition for intensities.
 
     Parameters:
     intensity_T (float): Rainfall intensity for duration T in mm/hr
@@ -58,14 +58,14 @@ values_15min = np.zeros(n_15min)
 dates = df["date"].values
 intensities = df["value"].values
 
-# Calculate all intensities at once using Bell's ratio
-intensity_5min = np.vectorize(lambda x: apply_bells_ratio_intensity(x, 5, 30))(
+# Calculate all intensities at once using IMF decomposition
+intensity_5min = np.vectorize(lambda x: apply_imf_decomp_intensity(x, 5, 30))(
     intensities
 )
-intensity_10min = np.vectorize(lambda x: apply_bells_ratio_intensity(x, 10, 30))(
+intensity_10min = np.vectorize(lambda x: apply_imf_decomp_intensity(x, 10, 30))(
     intensities
 )
-intensity_15min = np.vectorize(lambda x: apply_bells_ratio_intensity(x, 15, 30))(
+intensity_15min = np.vectorize(lambda x: apply_imf_decomp_intensity(x, 15, 30))(
     intensities
 )
 

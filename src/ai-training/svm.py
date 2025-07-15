@@ -40,7 +40,13 @@ data_10mns = df["10mns"].values
 data_15mns = df["15mns"].values
 data_30mns = df["30mns"].values
 data_1h = df["1h"].values
+data_90min = df["90min"].values
+data_2h = df["2h"].values
 data_3h = df["3h"].values
+data_6h = df["6h"].values
+data_12h = df["12h"].values
+data_15h = df["15h"].values
+data_18h = df["18h"].values
 data24h = df["24h"].values
 
 # Create DataFrames for each duration
@@ -49,12 +55,19 @@ df_10mns = pd.DataFrame({"duration": 10, "intensity": data_10mns})
 df_15mns = pd.DataFrame({"duration": 15, "intensity": data_15mns})
 df_30mns = pd.DataFrame({"duration": 30, "intensity": data_30mns})
 df_1h = pd.DataFrame({"duration": 60, "intensity": data_1h})
+df_90min = pd.DataFrame({"duration": 90, "intensity": data_90min})
+df_2h = pd.DataFrame({"duration": 120, "intensity": data_2h})
 df_3h = pd.DataFrame({"duration": 180, "intensity": data_3h})
+df_6h = pd.DataFrame({"duration": 360, "intensity": data_6h})
+df_12h = pd.DataFrame({"duration": 720, "intensity": data_12h})
+df_15h = pd.DataFrame({"duration": 900, "intensity": data_15h})
+df_18h = pd.DataFrame({"duration": 1080, "intensity": data_18h})
 df_24h = pd.DataFrame({"duration": 1440, "intensity": data24h})
 
 # Combine all DataFrames
 combined_df = pd.concat(
-    [df_5mns, df_10mns, df_15mns, df_30mns, df_1h, df_3h, df_24h], ignore_index=True
+    [df_5mns, df_10mns, df_15mns, df_30mns, df_1h, df_90min, df_2h, df_3h, 
+     df_6h, df_12h, df_15h, df_18h, df_24h], ignore_index=True
 )
 
 # Transform the data to make the relationship linear
@@ -142,10 +155,10 @@ for return_period in return_periods:
     intensities_rp = base_intensities * frequency_factors[return_period]
     idf_curves[return_period] = intensities_rp
 
-# Save IDF curves to CSV for standard durations only
-standard_durations_minutes = [5, 10, 15, 30, 60, 180, 1440]
+# Save IDF curves to CSV for all standard durations from duration_mapping
+standard_durations_minutes = [5, 10, 15, 30, 60, 90, 120, 180, 360, 720, 900, 1080, 1440]
 
-# Generate curves for standard durations only
+# Generate curves for all standard durations
 standard_idf_curves = {}
 for return_period in return_periods:
     standard_intensities = []
@@ -167,16 +180,21 @@ csv_path = os.path.join(
 idf_df.to_csv(csv_path, index=False)
 print(f"IDF curves data saved to: {csv_path}")
 
-# Sample specific durations for comparison with gumbel data
-specific_durations = [5, 10, 15, 30, 60, 180, 1440]
+# Define duration mapping for column names
 duration_mapping = {
     0: "5 mins",
     1: "10 mins", 
     2: "15 mins",
     3: "30 mins",
     4: "60 mins",
-    5: "180 mins",
-    6: "1440 mins"
+    5: "90 mins",
+    6: "120 mins",
+    7: "180 mins",
+    8: "360 mins",
+    9: "720 mins",
+    10: "900 mins",
+    11: "1080 mins",
+    12: "1440 mins"
 }
 
 # Calculate metrics for each return period
@@ -192,13 +210,12 @@ for rp in return_periods:
     y_true = []
     y_pred = []
     
-    for i, duration in enumerate(specific_durations):
+    for i, duration in enumerate(standard_durations_minutes):
         gumbel_col = duration_mapping[i]
         y_true.append(gumbel_row[gumbel_col])
         
-        # Find the closest duration in our predictions
-        duration_idx = np.abs(durations - duration).argmin()
-        y_pred.append(idf_curves[rp][duration_idx])
+        # Use the precomputed values from standard_idf_curves
+        y_pred.append(standard_idf_curves[rp][i])
     
     # Calculate metrics
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
@@ -242,8 +259,8 @@ for i, rp in enumerate(return_periods):
     
     # gumbel data (dashed line with markers)
     gumbel_row = gumbel_idf[gumbel_idf["Return Period (years)"] == rp].iloc[0]
-    gumbel_values = [gumbel_row[duration_mapping[j]] for j in range(len(specific_durations))]
-    plt.plot(specific_durations, gumbel_values, '--', color=colors[i], linewidth=1.5, label=f"Gumbel T = {rp} years")
+    gumbel_values = [gumbel_row[duration_mapping[j]] for j in range(len(standard_durations_minutes))]
+    plt.plot(standard_durations_minutes, gumbel_values, '--', color=colors[i], linewidth=1.5, label=f"Gumbel T = {rp} years")
 
 # plt.xscale('log')
 plt.xlabel('Duration (minutes)', fontsize=12)
@@ -281,4 +298,5 @@ plt.savefig(
     os.path.join(os.path.dirname(__file__), "..", "figures", "idf_curves_svm.png"),
     dpi=300,
 )
+
 print(f"IDF curves plot saved to: {os.path.join(os.path.dirname(__file__), '..', 'figures', 'idf_curves_svm.png')}")

@@ -349,7 +349,13 @@ class IDFDataset(Dataset):
             "15mns": 15 / 60,
             "30mns": 30 / 60,
             "1h": 1.0,
+            "90min": 1.5,
+            "2h": 2.0,
             "3h": 3.0,
+            "6h": 6.0,
+            "12h": 12.0,
+            "15h": 15.0,
+            "18h": 18.0,
             "24h": 24.0,
         }
 
@@ -359,14 +365,20 @@ class IDFDataset(Dataset):
             "15 mins": 15 / 60,
             "30 mins": 30 / 60,
             "60 mins": 1.0,
+            "90 mins": 1.5,
+            "120 mins": 2.0,
             "180 mins": 3.0,
+            "360 mins": 6.0,
+            "720 mins": 12.0,
+            "900 mins": 15.0,
+            "1080 mins": 18.0,
             "1440 mins": 24.0,
         }
 
         training_data = []
 
         # Process annual maxima (lightweight)
-        durations = ["5mns", "10mns", "15mns", "30mns", "1h", "3h", "24h"]
+        durations = ["5mns", "10mns", "15mns", "30mns", "1h", "90min", "2h", "3h", "6h", "12h", "15h", "18h", "24h"]
 
         for duration in durations:
             intensities = annual_max_data[duration].values
@@ -742,7 +754,7 @@ def evaluate_model(
 
     # Generate IDF curves
     return_periods = [2, 5, 10, 25, 50, 100]
-    durations_hours = [5 / 60, 10 / 60, 15 / 60, 30 / 60, 1.0, 3.0, 24.0]
+    durations_hours = [5/60, 10/60, 15/60, 30/60, 1.0, 1.5, 2.0, 3.0, 6.0, 12.0, 15.0, 18.0, 24.0]
 
     predicted_curves = generate_idf_curves(
         model, dataset, return_periods, durations_hours
@@ -755,7 +767,13 @@ def evaluate_model(
         "15 mins",
         "30 mins",
         "60 mins",
+        "90 mins",
+        "120 mins",
         "180 mins",
+        "360 mins",
+        "720 mins",
+        "900 mins",
+        "1080 mins",
         "1440 mins",
     ]
 
@@ -982,14 +1000,20 @@ def create_individual_model_plots(results: dict, dataset: Dataset):
     idf_target_data = pd.read_csv(idf_target_path)
 
     return_periods = [2, 5, 10, 25, 50, 100]
-    durations_minutes = [5, 10, 15, 30, 60, 180, 1440]
+    durations_minutes = [5, 10, 15, 30, 60, 90, 120, 180, 360, 720, 900, 1080, 1440]
     duration_cols = [
         "5 mins",
         "10 mins",
         "15 mins",
         "30 mins",
         "60 mins",
+        "90 mins",
+        "120 mins",
         "180 mins",
+        "360 mins",
+        "720 mins",
+        "900 mins",
+        "1080 mins",
         "1440 mins",
     ]
 
@@ -1139,14 +1163,20 @@ def create_smooth_individual_plots(results: dict, models_dict: dict, dataset: di
     idf_target_data = pd.read_csv(idf_target_path)
 
     return_periods = [2, 5, 10, 25, 50, 100]
-    durations_minutes = [5, 10, 15, 30, 60, 180, 1440]
+    durations_minutes = [5, 10, 15, 30, 60, 90, 120, 180, 360, 720, 900, 1080, 1440]
     duration_cols = [
         "5 mins",
         "10 mins",
         "15 mins",
         "30 mins",
         "60 mins",
+        "90 mins",
+        "120 mins",
         "180 mins",
+        "360 mins",
+        "720 mins",
+        "900 mins",
+        "1080 mins",
         "1440 mins",
     ]
 
@@ -1168,7 +1198,7 @@ def create_smooth_individual_plots(results: dict, models_dict: dict, dataset: di
         )
 
         # Save IDF curves to CSV for standard durations only
-        standard_durations_minutes = [5, 10, 15, 30, 60, 180, 1440]
+        standard_durations_minutes = [5, 10, 15, 30, 60, 90, 120, 180, 360, 720, 900, 1080, 1440]
         standard_durations_hours = [d / 60.0 for d in standard_durations_minutes]
         
         # Generate curves for standard durations only
