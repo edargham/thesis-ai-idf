@@ -12,6 +12,12 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 warnings.filterwarnings("ignore")
 
+np.random.seed(42)
+torch.manual_seed(42)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(42)
+if torch.mps.is_available():
+    torch.mps.manual_seed(42)
 
 # Calculate Nash-Sutcliffe Efficiency (NSE)
 def nash_sutcliffe_efficiency(observed, simulated):
@@ -30,9 +36,6 @@ def nash_sutcliffe_efficiency(observed, simulated):
     numerator = np.sum((observed - simulated) ** 2)
     denominator = np.sum((observed - np.mean(observed)) ** 2)
     return 1 - (numerator / denominator) if denominator != 0 else np.nan
-
-np.random.seed(368683)
-torch.manual_seed(368683)
 
 # Load the data - change input file to annual_max_intensity.csv
 input_file = os.path.join(
@@ -230,6 +233,13 @@ batch_size = 16  # Smaller batch size for small dataset
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
+np.random.seed(42)
+torch.manual_seed(42)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(42)
+if torch.mps.is_available():
+    torch.mps.manual_seed(42)
+
 # Define the neural network model for IDF curve generation
 class IDFModel(nn.Module):
     def __init__(self, input_size=1, hidden_sizes=[32, 64, 32]):  # input_size=1 for duration only
@@ -257,13 +267,16 @@ class IDFModel(nn.Module):
 
 
 # Initialize model, loss function, and optimizer
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 model = IDFModel().to(device)
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.002, weight_decay=5e-5)
+optimizer = optim.AdamW(model.parameters(), lr=0.002, weight_decay=5e-5)
+scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    optimizer, T_0=150, T_mult=2, eta_min=1e-6
+)
 
 # Learning rate scheduler
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.7, patience=50, verbose=False)
+# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.7, patience=50, verbose=False)
 
 # Early stopping parameters
 best_test_loss = float('inf')
@@ -361,7 +374,7 @@ def generate_idf_curve(model, return_periods, durations_minutes):
     3. This matches the SVM methodology exactly
     """
     model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     
     # Frequency factors (same as SVM)
     frequency_factors = {2: 0.85, 5: 1.15, 10: 1.35, 25: 1.60, 50: 1.80, 100: 2.00}
