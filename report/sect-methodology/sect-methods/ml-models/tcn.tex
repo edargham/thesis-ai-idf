@@ -8,19 +8,6 @@ Training was performed using the AdamW optimizer with a learning rate of 0.001 a
 
 \vspace{1em}
 
-The selected hyperparameters for the TCN model are as follows:
-
-\begin{align*}
-\text{Input Size} &: 2 \\
-\text{Hidden Channels} &: 8 \\
-\text{Dropout Rate} &: 0.05 \\
-\text{Sequence Length} &: 3 \\
-\text{Optimizer} &: \text{AdamW} \\
-\text{Learning Rate} &: 0.001 \\
-\text{Weight Decay} &: 1\times10^{-5} \\
-\text{Epochs} &: 1000 \\
-\end{align*}
-
 The TCN leverages dilated convolutions and residual connections to efficiently capture both local and long-range dependencies in the duration-intensity relationship, which is essential for modeling the complex temporal structure of rainfall events. Its lightweight architecture enables high accuracy with minimal parameters, making it suitable for hydrological modeling tasks with limited data.
 
 \vspace{1em}
@@ -32,19 +19,5 @@ The TCAN model extends the TCN\@ by incorporating a lightweight multi-head self-
 Training of the TCAN followed the same protocol as the TCN, utilizing the AdamW optimizer, early stopping, and weighted loss to ensure robust generalization and prevent overfitting. Model evaluation was conducted using the same suite of metrics (RMSE, MAE, R²), and the predicted IDF curves were benchmarked against the Gumbel-based results.
 
 \vspace{1em}
-
-The selected hyperparameters for the TCAN model are as follows:
-
-\begin{align*}
-\text{Input Size} &: 2 \\
-\text{Hidden Channels} &: 12 \\
-\text{Dropout Rate} &: 0.1 \\
-\text{Sequence Length} &: 3 \\
-\text{Attention Heads} &: 2 \\
-\text{Optimizer} &: \text{AdamW} \\
-\text{Learning Rate} &: 0.001 \\
-\text{Weight Decay} &: 1\times10^{-5} \\
-\text{Epochs} &: 1000 \\
-\end{align*}
 
 The integration of sparse attention enables the TCAN to focus on the most relevant features across the input sequence, enhancing its ability to model complex, nonlinear relationships in rainfall data. This makes the TCAN particularly effective for generating accurate IDF curves, especially in scenarios where capturing subtle temporal dependencies is critical.
