@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.svm import SVR
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error
@@ -83,8 +83,8 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # Standard scale the data
-scaler_X = StandardScaler()
-scaler_y = StandardScaler()
+scaler_X = MinMaxScaler()
+scaler_y = MinMaxScaler()
 
 X_train_scaled = scaler_X.fit_transform(X_train)
 X_test_scaled = scaler_X.transform(X_test)

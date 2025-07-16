@@ -1,6 +1,5 @@
 from datetime import datetime
-from meteostat import Point, Daily, Hourly, Monthly, Stations
-import pandas as pd
+from meteostat import Daily
 
 # Set time period
 start = datetime(2000, 6, 1)
