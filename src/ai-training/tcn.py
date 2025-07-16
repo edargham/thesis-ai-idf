@@ -12,6 +12,24 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+# Calculate Nash-Sutcliffe Efficiency (NSE)
+def nash_sutcliffe_efficiency(observed, simulated):
+    """
+    Compute Nash-Sutcliffe Efficiency (NSE).
+
+    Parameters:
+        observed (array-like): Array of observed values.
+        simulated (array-like): Array of simulated values.
+
+    Returns:
+        float: Nash-Sutcliffe Efficiency coefficient.
+    """
+    observed = np.array(observed)
+    simulated = np.array(simulated)
+    numerator = np.sum((observed - simulated) ** 2)
+    denominator = np.sum((observed - np.mean(observed)) ** 2)
+    return 1 - (numerator / denominator) if denominator != 0 else np.nan
+
 # Set random seeds for reproducibility
 np.random.seed(42)
 torch.manual_seed(42)
@@ -714,7 +732,7 @@ def evaluate_model(
     This function evaluates model performance by:
     1. Generating IDF curves for standard return periods and durations
     2. Comparing predictions with target Gumbel distribution data
-    3. Computing comprehensive regression metrics (RMSE, MAE, R²)
+    3. Computing comprehensive regression metrics (RMSE, MAE, R², NSE)
     4. Providing detailed performance analysis and target achievement status
     
     Args:
@@ -727,6 +745,7 @@ def evaluate_model(
             - rmse (float): Root Mean Square Error between predictions and targets
             - mae (float): Mean Absolute Error between predictions and targets  
             - r2 (float): R-squared coefficient of determination
+            - nse (float): Nash-Sutcliffe Efficiency coefficient
             - predicted_curves (dict): Dictionary mapping return periods to intensity lists
     
     Evaluation Details:
@@ -736,8 +755,8 @@ def evaluate_model(
         - Target achievement threshold: R² > 0.99
     
     Example:
-        >>> rmse, mae, r2, curves = evaluate_model(model, dataset, "TCN")
-        >>> print(f"Model R² = {r2:.6f}, Target achieved: {r2 > 0.99}")
+        >>> rmse, mae, r2, nse, curves = evaluate_model(model, dataset, "TCN")
+        >>> print(f"Model R² = {r2:.6f}, NSE = {nse:.6f}, Target achieved: {r2 > 0.99}")
         >>> print(f"10-year, 60-min intensity: {curves[10][4]:.2f} mm/hr")
     
     Note:
@@ -796,14 +815,16 @@ def evaluate_model(
     rmse = np.sqrt(mean_squared_error(all_targets, all_predictions))
     mae = mean_absolute_error(all_targets, all_predictions)
     r2 = r2_score(all_targets, all_predictions)
+    nse = nash_sutcliffe_efficiency(all_targets, all_predictions)
 
     print(f"Performance Metrics for {model_name}:")
     print(f"  RMSE: {rmse:.4f}")
     print(f"  MAE:  {mae:.4f}")
     print(f"  R²:   {r2:.6f}")
+    print(f"  NSE:  {nse:.6f}")
     print(f"  Target Achieved (R² > 0.99): {'✅' if r2 > 0.99 else '❌'}")
 
-    return rmse, mae, r2, predicted_curves
+    return rmse, mae, r2, nse, predicted_curves
 
 
 def generate_idf_curves(
@@ -970,7 +991,7 @@ def create_individual_model_plots(results: dict, dataset: Dataset):
     
     Args:
         results (dict): Dictionary containing evaluation results for each model:
-                       {model_name: (rmse, mae, r2, predicted_curves)}
+                       {model_name: (rmse, mae, r2, nse, predicted_curves)}
         dataset (Dataset): IDFDataset used for training (not directly used but maintained for consistency)
     
     Generated Files:
@@ -985,7 +1006,7 @@ def create_individual_model_plots(results: dict, dataset: Dataset):
         - Automatic safe filename generation from model names
     
     Example:
-        >>> results = {"TCN": (0.1, 0.05, 0.995, curves_dict)}
+        >>> results = {"TCN": (0.1, 0.05, 0.995, 0.994, curves_dict)}
         >>> create_individual_model_plots(results, dataset)
         # Creates: idf_comparison_tcn.png and idf_curves_tcn.png
     
@@ -1019,7 +1040,7 @@ def create_individual_model_plots(results: dict, dataset: Dataset):
 
     colors = ["blue", "green", "red", "purple", "orange", "brown"]
 
-    for model_name, (rmse, mae, r2, predicted_curves) in results.items():
+    for model_name, (rmse, mae, r2, nse, predicted_curves) in results.items():
         # Generate smooth curves for this model
         # We need to get the model back for smooth curve generation
         # For now, let's create two separate plots: comparison and original
@@ -1063,7 +1084,7 @@ def create_individual_model_plots(results: dict, dataset: Dataset):
         plt.text(
             0.02,
             0.98,
-            f"RMSE: {rmse:.4f}\nMAE: {mae:.4f}\nR²: {r2:.4f}",
+            f"RMSE: {rmse:.4f}\nMAE: {mae:.4f}\nR²: {r2:.4f}\nNSE: {nse:.4f}",
             transform=plt.gca().transAxes,
             fontsize=10,
             verticalalignment="top",
@@ -1127,7 +1148,7 @@ def create_smooth_individual_plots(results: dict, models_dict: dict, dataset: di
     
     Args:
         results (dict): Model evaluation results:
-                       {model_name: (rmse, mae, r2, discrete_predicted_curves)}
+                       {model_name: (rmse, mae, r2, nse, discrete_predicted_curves)}
         models_dict (dict): Dictionary of trained model objects:
                            {model_name: trained_model_instance}
         dataset (Dataset): IDFDataset containing scalers and preprocessing parameters
@@ -1190,7 +1211,7 @@ def create_smooth_individual_plots(results: dict, models_dict: dict, dataset: di
         if model_name not in results:
             continue
 
-        rmse, mae, r2, _ = results[model_name]
+        rmse, mae, r2, nse, _ = results[model_name]
 
         # Generate smooth curves for this model
         smooth_curves = generate_smooth_idf_curves(
@@ -1255,7 +1276,7 @@ def create_smooth_individual_plots(results: dict, models_dict: dict, dataset: di
         plt.text(
             0.02,
             0.98,
-            f"RMSE: {rmse:.4f}\nMAE: {mae:.4f}\nR²: {r2:.4f}",
+            f"RMSE: {rmse:.4f}\nMAE: {mae:.4f}\nR²: {r2:.4f}\nNSE: {nse:.4f}",
             transform=plt.gca().transAxes,
             fontsize=10,
             verticalalignment="top",
@@ -1405,11 +1426,11 @@ def main():
             **model_config["kwargs"],
         )
 
-        rmse, mae, r2, predicted_curves = evaluate_model(
+        rmse, mae, r2, nse, predicted_curves = evaluate_model(
             model, dataset, model_config["name"]
         )
 
-        results[model_config["name"]] = (rmse, mae, r2, predicted_curves)
+        results[model_config["name"]] = (rmse, mae, r2, nse, predicted_curves)
         param_counts.append(param_count)
         trained_models[model_config["name"]] = model  # Store the trained model
 
@@ -1434,7 +1455,7 @@ def main():
     )
     print("-" * 80)
 
-    for idx, (model_name, (rmse, mae, r2, _)) in enumerate(results.items()):
+    for idx, (model_name, (rmse, mae, r2, nse, _)) in enumerate(results.items()):
         efficiency = 1000000 / param_counts[idx]  # Efficiency metric
         target_achieved = "✅" if r2 > 0.99 else "❌"
         print(
@@ -1448,7 +1469,7 @@ def main():
 
     # Save comprehensive results
     results_summary = []
-    for idx, (model_name, (rmse, mae, r2, _)) in enumerate(results.items()):
+    for idx, (model_name, (rmse, mae, r2, nse, _)) in enumerate(results.items()):
         results_summary.append(
             {
                 "model_name": model_name,

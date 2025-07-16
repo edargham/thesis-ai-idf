@@ -12,6 +12,25 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 warnings.filterwarnings("ignore")
 
+
+# Calculate Nash-Sutcliffe Efficiency (NSE)
+def nash_sutcliffe_efficiency(observed, simulated):
+    """
+    Compute Nash-Sutcliffe Efficiency (NSE).
+
+    Parameters:
+        observed (array-like): Array of observed values.
+        simulated (array-like): Array of simulated values.
+
+    Returns:
+        float: Nash-Sutcliffe Efficiency coefficient.
+    """
+    observed = np.array(observed)
+    simulated = np.array(simulated)
+    numerator = np.sum((observed - simulated) ** 2)
+    denominator = np.sum((observed - np.mean(observed)) ** 2)
+    return 1 - (numerator / denominator) if denominator != 0 else np.nan
+
 np.random.seed(368683)
 torch.manual_seed(368683)
 
@@ -354,10 +373,11 @@ csv_path = os.path.join(
 idf_df.to_csv(csv_path, index=False)
 print(f"IDF curves data saved to: {csv_path}")
 
-# Calculate metrics (RMSE, MAE, R2) for each return period
+# Calculate metrics (RMSE, MAE, R2, NSE) for each return period
 rmse_values = []
 mae_values = []
 r2_values = []
+nse_values = []
 
 for rp in return_periods:
     empirical_row = idf_data[idf_data["Return Period (years)"] == rp].iloc[0]
@@ -375,17 +395,20 @@ for rp in return_periods:
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     mae = mean_absolute_error(y_true, y_pred)
     r2 = r2_score(y_true, y_pred)
+    nse = nash_sutcliffe_efficiency(y_true, y_pred)
     
     rmse_values.append(rmse)
     mae_values.append(mae)
     r2_values.append(r2)
+    nse_values.append(nse)
 
 # Display metrics
 metrics_df = pd.DataFrame({
     'Return Period': return_periods,
     'RMSE': [round(x, 4) for x in rmse_values],
     'MAE': [round(x, 4) for x in mae_values],
-    'R2': [round(x, 4) for x in r2_values]
+    'R2': [round(x, 4) for x in r2_values],
+    'NSE': [round(x, 4) for x in nse_values]
 })
 print("\nModel Performance Metrics by Return Period:")
 print(metrics_df)
@@ -394,10 +417,12 @@ print(metrics_df)
 overall_rmse = np.mean(rmse_values)
 overall_mae = np.mean(mae_values)
 overall_r2 = np.mean(r2_values)
+overall_nse = np.mean(nse_values)
 
 print(f"\nOverall RMSE: {overall_rmse:.4f}")
 print(f"Overall MAE: {overall_mae:.4f}")
 print(f"Overall R2: {overall_r2:.4f}")
+print(f"Overall NSE: {overall_nse:.4f}")
 
 # Create a figure to compare model predictions with empirical data
 plt.figure(figsize=(10, 6))
@@ -423,7 +448,7 @@ plt.title('IDF Curves Comparison: Neural Network vs Gumbel', fontsize=14)
 plt.grid(True, which="both", ls="-")
 
 # Add metrics as text
-plt.text(0.02, 0.98, f"RMSE: {overall_rmse:.4f}\nMAE: {overall_mae:.4f}\nR²: {overall_r2:.4f}",
+plt.text(0.02, 0.98, f"RMSE: {overall_rmse:.4f}\nMAE: {overall_mae:.4f}\nR²: {overall_r2:.4f}\nNSE: {overall_nse:.4f}",
          transform=plt.gca().transAxes, fontsize=10, verticalalignment='top',
          bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
