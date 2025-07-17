@@ -37,6 +37,10 @@ def nash_sutcliffe_efficiency(observed, simulated):
     denominator = np.sum((observed - np.mean(observed)) ** 2)
     return 1 - (numerator / denominator) if denominator != 0 else np.nan
 
+checkpoint_path = os.path.join(
+    os.path.dirname(__file__), "..", "checkpoints", "ann_best.pth"
+)
+
 # Load the data - change input file to annual_max_intensity.csv
 input_file = os.path.join(
     os.path.dirname(__file__), "..", "results", "annual_max_intensity.csv"
@@ -329,14 +333,13 @@ for epoch in range(num_epochs):
     if avg_test_loss < best_test_loss:
         best_test_loss = avg_test_loss
         patience_counter = 0
-        # Save best model
-        torch.save(model.state_dict(), 'best_idf_model.pth')
+        torch.save(model.state_dict(), checkpoint_path)
     else:
         patience_counter += 1
-        if patience_counter >= patience:
-            print(f"Early stopping at epoch {epoch + 1}")
-            break
-    
+    if patience_counter >= patience:
+        print(f"Early stopping at epoch {epoch + 1}")
+        break
+
     if (epoch + 1) % 100 == 0:
         print(
             f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {avg_train_loss:.6f}, "
@@ -344,7 +347,7 @@ for epoch in range(num_epochs):
         )
 
 # Load best model
-model.load_state_dict(torch.load('best_idf_model.pth'))
+model.load_state_dict(torch.load(checkpoint_path))
 print(f"Best test loss: {best_test_loss:.6f}")
 
 # Final evaluation

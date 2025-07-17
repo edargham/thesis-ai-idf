@@ -40,6 +40,9 @@ if torch.cuda.is_available():
 if torch.mps.is_available():
     torch.mps.manual_seed(42)
 
+checkpoint_path = os.path.join(
+    os.path.dirname(__file__), "..", "checkpoints", "tcn_tcan_best.pth"
+)
 
 class LightweightAttentionTCN(nn.Module):
     """
@@ -515,7 +518,7 @@ def train_model(
     # Training setup - optimized for TCAN architecture
     criterion = nn.MSELoss()
 
-    optimizer = optim.AdamW(model.parameters(), lr=0.00215, weight_decay=1e-4)
+    optimizer = optim.AdamW(model.parameters(), lr=0.002, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer, T_0=150, T_mult=2, eta_min=1e-6
     )
@@ -572,6 +575,7 @@ def train_model(
             best_test_loss = test_loss
             best_model_state = model.state_dict().copy()
             patience_counter = 0
+            torch.save(model.state_dict(), checkpoint_path)
         else:
             patience_counter += 1
 

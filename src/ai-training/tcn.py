@@ -40,6 +40,9 @@ if torch.cuda.is_available():
 if torch.mps.is_available():
     torch.mps.manual_seed(42)
 
+checkpoint_path = os.path.join(
+    os.path.dirname(__file__), "..", "checkpoints", "tcn_vanilla_best.pth"
+)
 
 class UltraEfficientTCN(nn.Module):
     """
@@ -631,6 +634,7 @@ def train_model(
             best_test_loss = test_loss
             best_model_state = model.state_dict().copy()
             patience_counter = 0
+            torch.save(model.state_dict(), checkpoint_path)
         else:
             patience_counter += 1
 
