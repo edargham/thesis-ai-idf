@@ -1,0 +1,13 @@
+\section{Materials and Methods}
+\subsection{Methodology}
+This study employs remotely-sensed rainfall data to develop IDF curves for return periods of 2, 5, 10, 25, 50, and 100 years. The analysis uses both the Gumbel distribution and advanced ML approaches (SVMs, ANNs, TCNs, and TCANs) for IDF curve construction.
+
+\vspace{1em}
+
+To achieve this, high-resolution precipitation data was downloaded from the GPM-IMERG satellite product, which is then processed to extract the rainfall events with the highest intensity for each year in each duration. The data is then used to fit the Gumbel distribution and train the ML models. The performance of the models is evaluated using metrics such as Mean Absolute Error (MAE), Root Mean Square Error (RMSE), and R-squared (R²) values.
+
+\input{sect-methodology/sect-sources/sources}
+
+\input{sect-methodology/sect-preprocessing/preprocessing}
+
+\input{sect-methodology/sect-methods/methods}

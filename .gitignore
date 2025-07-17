@@ -2,3 +2,10 @@ data/*.csv
 .DS_Store
 *.old
 .DS_Store
+*.xlsx
+*.pt
+*.pth
+*.zip
+
+src/results/bey-aggregated-final.csv
+src/results/historical_intensity.csv

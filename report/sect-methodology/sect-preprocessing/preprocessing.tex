@@ -1,0 +1,14 @@
+\subsection{Preprocessing}
+From the data collected, we derive the precipitation values for 5 minutes, 10 minutes, 15 minutes, 30 minutes, 1 hour, 3 hours and 24 hours. GPM-IMERG provides precipitation values for 30 minutes and 24 hours, while the other values were dervived from these two timeseries using the Indian Meteorlogical Department Formula (IMF), widely used accross hydrology literature in Lebanon~\cite{}.%TODO: add references to IMF used in Lebanon.
+The IMF is defined as follows~\cite{}:
+\begin{equation}
+P_{t} = P_{T} \times {\left(\frac{t}{T}\right)}^{\frac{1}{3}}
+\end{equation}
+where:
+\begin{itemize}
+  \item $P_{t}$ is the precipitation value for the time period $t$ in mm.
+  \item $P_{T}$ is the precipitation value for the time period $T$ in mm.
+  \item $t$ is the time period for which we want to derive the precipitation value in minutes.
+  \item $T$ is the time period for which we have the precipitation value in minutes.
+\end{itemize}
+The derived precipitation time-series are then converted to intensities by dividing the precipitation values by the time period in hours, from which the maximum intensity for every year in the dataset is extracted for each duration. Subsequently, these maximum intensities are used to construct the IDF curves using the Gumbel distribution and train the machine learning models.

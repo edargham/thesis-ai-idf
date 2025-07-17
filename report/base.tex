@@ -1,0 +1,39 @@
+\documentclass[
+  12pt,
+  a4paper,
+  twocolumn,
+]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext}       % Times Roman text font
+\usepackage{newtxmath}       % Times Roman math font
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage[hmargin=0.5in,vmargin=1.025in]{geometry}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+
+\author{Eng. Cynthia Andraos Khazzaka, Ph.D\textsuperscript{1} \and Elias Dargham\textsuperscript{1} \\
+\textsuperscript{1}Regional Center for Water and Environment, Faculty of Engineering, \\
+Saint Joseph University of Beirut, Beirut, Lebanon \\
+cynthia.andraos2@usj.edu.lb, elias.dargham@net.usj.edu.lb}
+\title{Development of Intensity, Duration and Frequency Curves using Machine Learning and Satellite-Derived Precipitation Data}
+\date{}
+\renewcommand{\headrulewidth}{0pt}
+\setlength{\parindent}{0pt}
+\begin{document}
+
+\onecolumn
+\maketitle
+\input{abstract/abstract}
+\twocolumn
+
+\input{sect-introduction/intro}
+\input{sect-methodology/methodology}
+
+\bibliographystyle{IEEEtran}
+\onecolumn
+\bibliography{references}
+\end{document}
