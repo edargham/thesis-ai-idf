@@ -1291,6 +1291,50 @@ def main():
     print("✅ No circular dependency on Weibull return periods!")
     print("✅ Fair comparison with other ML methods!")
 
+    overall_rmse = rmse
+    overall_mae = mae
+    overall_r2 = r2
+    overall_nse = nse
+
+    # Save model metrics to CSV
+    metrics_path = os.path.join(os.path.dirname(__file__), "..", "results", "model_performance_metrics.csv")
+
+    try:
+        # Try to read existing metrics file
+        metrics_df = pd.read_csv(metrics_path)
+
+        # Check if TCAN row exists
+        if "TCAN" in metrics_df["Model"].values:
+            # Update existing row
+            tcan_idx = metrics_df.index[metrics_df["Model"] == "TCAN"].tolist()[0]
+            metrics_df.loc[tcan_idx, "RMSE"] = overall_rmse
+            metrics_df.loc[tcan_idx, "MAE"] = overall_mae
+            metrics_df.loc[tcan_idx, "R2"] = overall_r2
+            metrics_df.loc[tcan_idx, "NSE"] = overall_nse
+        else:
+            # Add new row
+            new_row = pd.DataFrame({
+                "Model": ["TCAN"],
+                "RMSE": [overall_rmse],
+                "MAE": [overall_mae],
+                "R2": [overall_r2],
+                "NSE": [overall_nse]
+            })
+            metrics_df = pd.concat([metrics_df, new_row], ignore_index=True)
+    except FileNotFoundError:
+        # Create new metrics file
+        metrics_df = pd.DataFrame({
+            "Model": ["TCAN"],
+            "RMSE": [overall_rmse],
+            "MAE": [overall_mae],
+            "R2": [overall_r2],
+            "NSE": [overall_nse]
+        })
+
+    # Save updated metrics
+    metrics_df.to_csv(metrics_path, index=False)
+    print(f"\nModel metrics saved to: {metrics_path}")
+
 
 if __name__ == "__main__":
     main()

@@ -1,10 +1,10 @@
 \subsubsection{Support Vector Machines (SVM)}
-The SVM model was trained to predict the log-transformed annual maximum rainfall intensity from the log-transformed event duration, using a Support Vector Regression (SVR) approach. The input data was standardized, and a grid search with 5-fold cross-validation was employed to optimize the SVR hyperparameters. The best-performing model was then fitted to the training set, and its predictions were inverse-transformed and exponentiated to recover the original intensity scale.
+The SVM model is trained to predict the log-transformed annual maximum rainfall intensity from the log-transformed event duration, using a Support Vector Regression (SVR) approach. The input data is scaled using min-max scaling, and a grid search with 5-fold cross-validation was employed to optimize the SVR hyperparameters. The best-performing model is then fitted to the training set, and its predictions were inverse-transformed and exponentiated to recover the original intensity scale.
 
 \vspace{1em}
 
-Model performance was evaluated on the test set using root mean squared error (RMSE), mean absolute error (MAE), and the Nash-Sutcliffe Efficiency (NSE) coefficient. IDF curves were generated for various return periods by scaling the base SVM predictions with empirically derived frequency factors, and compared against Gumbel-distribution-based IDF curves for validation.
+Model performance is evaluated on the test set using root mean squared error (RMSE), mean absolute error (MAE), Coefficient of Determination (R$^{2}$), and the Nash-Sutcliffe Efficiency (NSE) coefficient. IDF curves are generated for various return periods by scaling the base SVM predictions with empirically derived frequency factors, and compared against Gumbel-distribution-based IDF curves for validation.
 
 \vspace{1em}
 
-The SVM model's ability to capture the non-linear relationship between rainfall intensity and event duration was assessed, demonstrating its effectiveness in modeling complex hydrological processes. The model's predictions were visualized against the Gumbel-based IDF curves, showing a good fit for most return periods.
+The SVM model's ability to capture the non-linear relationship between rainfall intensity and event duration is assessed, demonstrating its effectiveness in modeling complex hydrological processes. The model's predictions are visualized against the Gumbel-based IDF curves, showing a good fit for most return periods.

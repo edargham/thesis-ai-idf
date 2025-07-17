@@ -1,0 +1,10 @@
+\subsection{Comparison}
+Among all tested models, the TCN scores the lowest RMSE (9.98) and MAE (7.63), indicating the greatest accuracy in estimating the maximum annual rainfall intensities required for IDF curve generation. While TCAN with less trainable parameters slightly trails behind TCN in these metrics, its R$^{2}$ and NSE values remain comparably high, demonstrating robust generalization across test cases.
+
+\vspace{1em}
+
+Both ANN and SVM, while superior to the Gumbel distribution approach, lag behind convolution-based architectures. The noticeable improvements from ANN to TCN/TCAN can be attributed to the capacity of convolutional and attention layers to capture both short- and long-term dependencies—a key aspect given the temporal and highly variable nature of precipitation extremes.
+
+\vspace{1em}
+
+The consistently high NSE values ($> 0.9$) for all models suggest strong predictive skill and minimal bias relative to observed annual maximum intensities. These results align with and extend findings in the contemporary literature regarding the advantages of deep learning approaches in hydrological modeling tasks over traditional regression-based techniques~\cite{19}.

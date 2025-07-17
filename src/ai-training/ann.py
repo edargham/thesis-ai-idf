@@ -560,6 +560,38 @@ print(f"Overall MAE: {overall_mae:.4f}")
 print(f"Overall R2: {overall_r2:.4f}")
 print(f"Overall NSE: {overall_nse:.4f}")
 
+# Check if metrics file exists
+metrics_file_path = os.path.join(os.path.dirname(__file__), "..", "results", "model_performance_metrics.csv")
+
+# Create metrics row for ANN model
+ann_metrics = {
+    'Model': 'ANN',
+    'RMSE': overall_rmse,
+    'MAE': overall_mae,
+    'R2': overall_r2,
+    'NSE': overall_nse
+}
+
+if os.path.exists(metrics_file_path):
+    # Load existing metrics file and append ANN metrics
+    overall_df = pd.read_csv(metrics_file_path)
+    
+    # Check if ANN model already exists in the dataframe
+    if 'ANN' in overall_df['Model'].values:
+        # Update existing ANN entry - first remove the old entry, then add the new one
+        overall_df = overall_df[overall_df['Model'] != 'ANN']
+        overall_df = pd.concat([overall_df, pd.DataFrame([ann_metrics])], ignore_index=True)
+    else:
+        # Append ANN metrics as a new row
+        overall_df = pd.concat([overall_df, pd.DataFrame([ann_metrics])], ignore_index=True)
+else:
+    # Create new dataframe with ANN metrics
+    overall_df = pd.DataFrame([ann_metrics])
+
+# Save metrics to CSV
+overall_df.to_csv(metrics_file_path, index=False)
+print(f"Model performance metrics saved to: {metrics_file_path}")
+
 # Additional robustness check - calculate metrics using all data points
 all_y_true = []
 all_y_pred = []

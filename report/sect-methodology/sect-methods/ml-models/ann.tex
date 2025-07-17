@@ -1,10 +1,10 @@
 \subsubsection{Artificial Neural Networks (ANN)}
 
-The ANN model was trained to predict the log-transformed annual maximum rainfall intensity using both the log-transformed event duration and log-transformed return period as inputs. The dataset was standardized and split into 50\% for training and 50\% for validation to ensure robust generalization. The neural network architecture consisted of two hidden layers with 24 neurons each, ReLU activations, and dropout regularization to prevent overfitting.
+The ANN model is trained to predict the log-transformed annual maximum rainfall intensity using both the log-transformed event duration input. The dataset is scaled with min-max scaling and split into 50\% for training and 50\% for validation to ensure robust generalization. The neural network architecture is provided in Table~\ref{tab:hyperparameters}.
 
 \vspace{1em}
 
-Model training was performed using the Adam optimizer with a learning rate of 0.0001 over 2500 epochs, minimizing mean squared error loss. After training, predictions were inverse-transformed and exponentiated to recover the original intensity scale. Model performance was evaluated using RMSE, MAE, and R² metrics across all return periods, and the resulting ANN-based IDF curves were compared visually and quantitatively against the Gumbel-distribution-based benchmarks.
+Model training is performed using the AdamW optimizer with a learning rate of 0.002 over 3000 epochs, minimizing mean squared error loss. After training, predictions are inverse-transformed and exponentiated to recover the original intensity scale. Model performance is evaluated using RMSE, MAE, NSE, and R$^{2}$ metrics across all return periods, and the resulting ANN-based IDF curves are compared visually and quantitatively against the Gumbel-distribution-based benchmarks.
 
 \vspace{1em}
 

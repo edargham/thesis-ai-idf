@@ -1,10 +1,10 @@
 \subsubsection{Temporal Convolutional Networks (TCN) and Variants with Sparse Attention (TCAN)}
 
-The TCN model was implemented to predict the log-transformed annual maximum rainfall intensity using sequences of log-transformed return period and duration as input features. Each input was formatted as a sequence of length 3, with features standardized for stable training. The model architecture consists of two dilated 1D convolutional layers with residual connections, followed by global average pooling and a linear output layer, resulting in a highly parameter-efficient design.
+The TCN model is implemented to predict the log-transformed annual maximum rainfall intensity using sequences of duration as input features. Each input is formatted as a sequence of length 5, with features scaled with min-max scaling for stable training. The model architecture consists of two dilated 1D convolutional layers with residual connections, followed by global average pooling and a linear output layer, resulting in a highly parameter-efficient design.
 
 \vspace{1em}
 
-Training was performed using the AdamW optimizer with a learning rate of 0.001 and weight decay of 1e-5, for up to 1000 epochs with early stopping based on validation loss. Weighted mean squared error was used as the loss function to emphasize target IDF points, and gradient clipping was applied for stability. Model performance was assessed using RMSE, MAE, and R² metrics, and the generated IDF curves were compared against the Gumbel-distribution-based benchmarks for validation.
+The model is trained using the AdamW optimizer with a learning rate of 0.002 and weight decay of 5e-5, for up to 2000 epochs with early stopping based on validation loss. A hybrid loss consisting of weighted mean squared error and mean absolute error is used to allow the model to appropriatly penalize outliers without completely ruling them out, and gradient clipping was applied for stability. Model performance is assessed using RMSE, MAE, NSE, and R$^{2}$ metrics, and the generated IDF curves are compared against the Gumbel-distribution-based benchmarks for validation.
 
 \vspace{1em}
 
@@ -12,11 +12,11 @@ The TCN leverages dilated convolutions and residual connections to efficiently c
 
 \vspace{1em}
 
-The TCAN model extends the TCN\@ by incorporating a lightweight multi-head self-attention mechanism after the dilated convolutional layers. This addition allows the network to better capture long-range dependencies and interactions between different temporal positions in the input sequence. The input preparation and standardization procedures mirror those used for the TCN\@.
+The TCAN model extends the TCN\@ by incorporating a lightweight multi-head self-attention mechanism after the dilated convolutional layers. This addition allows the network to better capture long-range dependencies and interactions between different temporal positions in the input sequence. The input preparation and scaling procedures mirror those used for the TCN\@, with the adjustments to hyperparameters detailed in Table~\ref{tab:hyperparameters}.
 
 \vspace{1em}
 
-Training of the TCAN followed the same protocol as the TCN, utilizing the AdamW optimizer, early stopping, and weighted loss to ensure robust generalization and prevent overfitting. Model evaluation was conducted using the same suite of metrics (RMSE, MAE, R²), and the predicted IDF curves were benchmarked against the Gumbel-based results.
+Training of the TCAN follows the same protocol as the TCN, utilizing the AdamW optimizer, early stopping, but however, uses MSE loss to ensure robust generalization. Model evaluation is conducted using the same suite of metrics (RMSE, MAE, NSE, R$^{2}$), and the predicted IDF curves are benchmarked against the Gumbel-based results.
 
 \vspace{1em}
 

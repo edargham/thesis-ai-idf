@@ -251,6 +251,36 @@ print(f"Overall MAE: {overall_mae:.4f}")
 print(f"Overall R2: {overall_r2:.4f}")
 print(f"Overall NSE: {overall_nse:.4f}")
 
+# Check if performance metrics file exists, append if it does, create if not
+metrics_file_path = os.path.join(os.path.dirname(__file__), "..", "results", "model_performance_metrics.csv")
+metrics_row = {
+    'Model': 'SVM',
+    'RMSE': overall_rmse,
+    'MAE': overall_mae,
+    'R2': overall_r2,
+    'NSE': overall_nse
+}
+
+if os.path.exists(metrics_file_path):
+    # Load existing metrics file and append new row
+    metrics_df = pd.read_csv(metrics_file_path)
+    
+    # Check if SVM model already exists in the dataframe
+    if 'SVM' in metrics_df['Model'].values:
+        # Update existing row
+        for col, val in metrics_row.items():
+            metrics_df.loc[metrics_df['Model'] == 'SVM', col] = val
+    else:
+        # Append new row
+        metrics_df = pd.concat([metrics_df, pd.DataFrame([metrics_row])], ignore_index=True)
+else:
+    # Create new metrics dataframe
+    metrics_df = pd.DataFrame([metrics_row])
+
+# Save metrics to CSV
+metrics_df.to_csv(metrics_file_path, index=False)
+print(f"Model performance metrics saved to: {metrics_file_path}")
+
 # Create a figure to compare model predictions with gumbel data
 plt.figure(figsize=(10, 6))
 
